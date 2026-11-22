@@ -1,4 +1,4 @@
-import * as maplibregl from 'maplibre-gl';
+import { maplibregl } from '../lib/maplibre';
 import type { GeoJSONSource, LngLatBoundsLike, Map as MLMap } from 'maplibre-gl';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { STATUS } from '../config';
