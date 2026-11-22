@@ -1,0 +1,3 @@
+# Archivos que Cloudflare no debe publicar ni interpretar
+_redirects
+_headers
