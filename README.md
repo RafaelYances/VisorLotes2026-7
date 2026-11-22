@@ -113,7 +113,19 @@ Es un sitio estático (`npm run build` → carpeta `dist/`). Funciona tal cual e
 
 ## Mapas
 
-- **Satélite (vista híbrida):** imagen de Esri World Imagery con las etiquetas y vías de OpenStreetMap encima (veredas, playas, vías, negocios), en español cuando existe el nombre.
-- **Mapa:** OpenFreeMap, estilo *Liberty* (datos de OpenStreetMap). Gratis, sin clave y con uso comercial permitido.
-- Si OpenFreeMap no responde, el visor usa automáticamente un mapa de respaldo de Esri.
-- Las etiquetas salen de OpenStreetMap: si un negocio o lugar de la zona no aparece, cualquiera puede agregarlo gratis en <https://www.openstreetmap.org> y se verá en el visor tras la siguiente actualización de OpenFreeMap (normalmente en pocos días).
+### Google Maps (recomendado: lugares turísticos, muelle, negocios)
+El visor usa los mapas de Google por su servicio oficial (**Map Tiles API**) cuando existe la variable `VITE_GOOGLE_MAPS_KEY`:
+- **Satélite:** imagen de Google con calles, lugares y negocios encima (vista híbrida).
+- **Mapa:** mapa de calles de Google.
+- Se muestran el logo y los derechos de autor de Google, como exigen sus condiciones.
+- Si la clave falla, el dominio no está autorizado o se agota la cuota diaria, el visor cambia solo al mapa gratis.
+
+Configuración de la clave (nunca se guarda en el repositorio):
+- **Cloudflare:** *Settings → Build → Variables and secrets* → `VITE_GOOGLE_MAPS_KEY` = tu clave. Luego vuelve a publicar (un push o *Retry build* del último commit).
+- **Tu computador:** copia `.env.example` como `.env.local`, pega la clave y reinicia `npm run dev`.
+- **Google Cloud:** la clave debe estar restringida a tus dominios (`https://tu-sitio.workers.dev/*`, `http://localhost:5173/*`) y a la API *Map Tiles API*. Pon un límite diario de unas 3.300 solicitudes para no pasar de las 100.000 gratis al mes.
+
+### Mapa gratis (respaldo)
+- **Satélite:** Esri World Imagery con etiquetas y vías de OpenStreetMap encima.
+- **Mapa:** OpenFreeMap, estilo *Liberty* (OpenStreetMap). Gratis, sin clave y con uso comercial permitido.
+- Si OpenFreeMap no responde, se usa un respaldo raster de Esri.

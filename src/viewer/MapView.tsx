@@ -2,7 +2,8 @@ import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MLMa
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { STATUS } from '../config';
 import { m2 } from '../lib/format';
-import { applyBase, buildStyle, FONT, FONT_BOLD, osmLabelLayers, type BaseLayer } from '../lib/mapStyle';
+import { clearSessions, getSession, googleEnabled, tileUrl, viewportCopyright } from '../lib/googleTiles';
+import { addGoogleLayers, applyBase, buildStyle, FONT, FONT_BOLD, osmLabelLayers, type BaseLayer, type Provider } from '../lib/mapStyle';
 import type { Lot, Project } from '../types';
 
 export interface MapHandle {
@@ -53,6 +54,10 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   paddingRef.current = padding;
   const baseRef = useRef(base);
   baseRef.current = base;
+  // Proveedor del mapa de fondo: Google (si hay clave y responde) o el mapa gratis
+  const [provider, setProvider] = useState<Provider>('free');
+  const sessions = useRef<{ roadmap?: Awaited<ReturnType<typeof getSession>>; satellite?: Awaited<ReturnType<typeof getSession>> }>({});
+  const [copyright, setCopyright] = useState('');
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const lotsById = useRef(new Map<string, Lot>());
@@ -398,6 +403,31 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         for (const id of osmLabelLayers(map)) map.moveLayer(id, 'house-labels');
         applyBase(map, baseRef.current);
 
+        // Mapas de Google (servicio oficial) si hay clave configurada
+        if (googleEnabled) {
+          Promise.all([getSession('roadmap'), getSession('satellite')])
+            .then(([roadmap, satellite]) => {
+              if (cancelled || !roadmap || !satellite) return;
+              sessions.current = { roadmap, satellite };
+              addGoogleLayers(map, { roadmap: tileUrl(roadmap), satellite: tileUrl(satellite) }, 'greens');
+              setProvider('google');
+            })
+            .catch((err) => {
+              console.warn('Google Maps no disponible, se usa el mapa gratis:', err);
+              clearSessions();
+            });
+          // Cuota agotada, clave inválida o dominio no autorizado → mapa gratis
+          map.on('error', (ev) => {
+            const src = (ev as unknown as { sourceId?: string }).sourceId;
+            const status = (ev.error as unknown as { status?: number })?.status;
+            if (src?.startsWith('g-') && (status === 401 || status === 403 || status === 429)) {
+              console.warn(`Google Maps respondió ${status}; se cambia al mapa gratis`);
+              clearSessions();
+              setProvider('free');
+            }
+          });
+        }
+
         loadedRef.current = true;
         setLoaded(true);
         pending.current?.();
@@ -421,8 +451,39 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
-    applyBase(map, base);
-  }, [base, loaded]);
+    applyBase(map, base, provider);
+  }, [base, loaded, provider]);
+
+  // ----------------------------------------- derechos de autor de Google (obligatorio)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded || provider !== 'google') {
+      setCopyright('');
+      return;
+    }
+    let timer = 0;
+    let last = '';
+    const update = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const s = base === 'satellite' ? sessions.current.satellite : sessions.current.roadmap;
+        if (!s) return;
+        const b = map.getBounds();
+        const key = `${base}|${Math.round(map.getZoom())}|${b.getCenter().lng.toFixed(2)}|${b.getCenter().lat.toFixed(2)}`;
+        if (key === last) return;
+        last = key;
+        viewportCopyright(s, map.getZoom(), { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+          .then(setCopyright)
+          .catch(() => setCopyright('Datos del mapa ©Google'));
+      }, 600);
+    };
+    update();
+    map.on('moveend', update);
+    return () => {
+      window.clearTimeout(timer);
+      map.off('moveend', update);
+    };
+  }, [provider, base, loaded]);
 
   // ------------------------------------------------------------- selection
   useEffect(() => {
@@ -501,6 +562,18 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   return (
     <div className="absolute inset-0">
       <div ref={el} className="h-full w-full" />
+      {provider === 'google' && (
+        <div className="pointer-events-none absolute top-[76px] left-3 z-10 flex items-center gap-2 md:top-auto md:bottom-[34px] md:left-[132px]">
+          <GoogleLogo light={base === 'satellite'} />
+          {copyright && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[10px] ${base === 'satellite' ? 'bg-black/40 text-white' : 'bg-white/75 text-slate-700'}`}
+            >
+              {copyright}
+            </span>
+          )}
+        </div>
+      )}
       {hover && (
         <div
           className="pointer-events-none absolute z-10 hidden -translate-x-1/2 -translate-y-[calc(100%+14px)] md:block"
@@ -520,3 +593,19 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     </div>
   );
 });
+
+/** Logo de Google exigido al mostrar sus mapas (imagen oficial; texto si no carga). */
+function GoogleLogo({ light }: { light: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const src = light
+    ? 'https://maps.gstatic.com/mapfiles/api-3/images/google_white5_hdpi.png'
+    : 'https://maps.gstatic.com/mapfiles/api-3/images/google4_hdpi.png';
+  if (!failed) return <img src={src} alt="Google" width={66} height={26} className="h-[26px] w-[66px]" onError={() => setFailed(true)} />;
+  return (
+    <span
+      className={`[font-family:Arial,sans-serif] text-[15px] font-medium tracking-tight ${light ? 'text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]' : 'text-slate-600'}`}
+    >
+      Google
+    </span>
+  );
+}

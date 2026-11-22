@@ -14,7 +14,8 @@ export type BaseLayer = 'satellite' | 'streets';
 export const FONT = ['Noto Sans Regular'];
 export const FONT_BOLD = ['Noto Sans Bold'];
 
-type Group = 'osm-base' | 'osm-label' | 'osm-road' | 'satellite' | 'fb-streets' | 'fb-places';
+type Group = 'osm-base' | 'osm-label' | 'osm-road' | 'satellite' | 'fb-streets' | 'fb-places' | 'g-roadmap' | 'g-satellite';
+export type Provider = 'google' | 'free';
 const GROUP = 'vl:group';
 
 const satelliteSource = {
@@ -125,9 +126,31 @@ export const osmLabelLayers = (map: MLMap) =>
 
 const originals = new WeakMap<MLMap, Map<string, Record<string, unknown>>>();
 
-/** Cambia entre "Satélite" (híbrido) y "Mapa". */
-export function applyBase(map: MLMap, base: BaseLayer) {
+/** Agrega los mapas de Google (si hay sesión) justo debajo de las capas del proyecto. */
+export function addGoogleLayers(map: MLMap, tiles: Partial<Record<'roadmap' | 'satellite', string>>, beforeId: string) {
+  for (const [type, url] of Object.entries(tiles)) {
+    if (!url) continue;
+    const id = `g-${type}`;
+    if (map.getSource(id)) continue;
+    map.addSource(id, {
+      type: 'raster',
+      tiles: [url],
+      tileSize: 256,
+      // En zona rural la imagen satelital de Google puede no existir por encima de z18:
+      // a partir de ahí se amplía la de z18 (evita cuadros vacíos). El mapa de calles llega a z20.
+      maxzoom: type === 'satellite' ? 18 : 20,
+    });
+    map.addLayer(
+      { id, type: 'raster', source: id, metadata: { [GROUP]: id }, layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 200 } },
+      beforeId,
+    );
+  }
+}
+
+/** Cambia entre "Satélite" (híbrido) y "Mapa", con Google o con el mapa gratis. */
+export function applyBase(map: MLMap, base: BaseLayer, provider: Provider = 'free') {
   const sat = base === 'satellite';
+  const google = provider === 'google';
   let store = originals.get(map);
   if (!store) originals.set(map, (store = new Map()));
   const save = (id: string, prop: string) => {
@@ -144,9 +167,14 @@ export function applyBase(map: MLMap, base: BaseLayer) {
     const g = groupOf(l);
     if (!g) continue;
     const vis = (v: boolean) => map.setLayoutProperty(l.id, 'visibility', v ? 'visible' : 'none');
-    if (g === 'osm-base' || g === 'fb-streets') vis(!sat);
+    if (g === 'g-roadmap') vis(google && !sat);
+    else if (g === 'g-satellite') vis(google && sat);
+    // Con Google activo se ocultan las capas gratuitas (Google ya trae sus etiquetas)
+    else if (google) vis(false);
+    else if (g === 'osm-base' || g === 'fb-streets') vis(!sat);
     else if (g === 'satellite' || g === 'fb-places' || g === 'osm-road') vis(sat);
     else if (g === 'osm-label' && l.type === 'symbol') {
+      vis(true);
       // Sobre el satélite: texto blanco con halo oscuro (como en la vista híbrida)
       setPaint(l.id, 'text-color', '#ffffff');
       setPaint(l.id, 'text-halo-color', 'rgba(0,0,0,0.85)');
