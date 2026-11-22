@@ -1,0 +1,12 @@
+// Configuración para publicar en Cloudflare Workers (sitio estático).
+{
+  "name": "visorlotes2026-7",
+  "compatibility_date": "2025-09-01",
+  // Compila el sitio (datos + Vite) antes de publicar
+  "build": { "command": "npm run build" },
+  "assets": {
+    "directory": "./dist",
+    // Rutas como /proyecto/... se resuelven en la app
+    "not_found_handling": "single-page-application"
+  }
+}

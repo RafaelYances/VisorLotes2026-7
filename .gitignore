@@ -7,3 +7,5 @@ public/data
 *.bak
 *.dwl
 *.dwl2
+*.tsbuildinfo
+.wrangler
