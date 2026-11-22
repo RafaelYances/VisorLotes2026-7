@@ -88,7 +88,7 @@ El workflow `.github/workflows/deploy.yml` compila y publica el sitio (se ejecut
 
 ## Publicar en otro hosting
 
-Es un sitio estático (`npm run build` → carpeta `dist/`). Funciona tal cual en **Vercel** o **Netlify** (ya incluye `vercel.json` y `public/_redirects` para las rutas `/proyecto/...`).
+Es un sitio estático (`npm run build` → carpeta `dist/`). Funciona tal cual en **Vercel** o **Netlify** (incluye `wrangler.jsonc` para Cloudflare, `netlify.toml` para Netlify y `vercel.json` para Vercel).
 
 - Build command: `npm run build`
 - Output directory: `dist`
