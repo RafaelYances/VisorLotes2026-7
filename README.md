@@ -96,4 +96,4 @@ Es un sitio estático (`npm run build` → carpeta `dist/`). Funciona tal cual e
 ## Mapas
 
 - Satélite: Esri World Imagery (gratuito, con atribución). En esa zona hay imagen hasta zoom 18; por encima se amplía.
-- Mapa: CARTO Voyager. Tipografías de rótulos: OpenFreeMap.
+- Mapa: Esri World Street Map (sin clave). Tipografías de rótulos: OpenFreeMap.

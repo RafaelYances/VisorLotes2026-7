@@ -1,7 +1,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
 /**
- * Estilo base: imagen satelital (Esri World Imagery) + mapa vectorial claro (CARTO Voyager)
+ * Estilo base: imagen satelital (Esri World Imagery) + mapa de calles (Esri World Street Map)
  * en el mismo estilo, para alternar entre "Satélite" y "Mapa" sin recargar capas.
  */
 export const baseStyle: StyleSpecification = {
@@ -18,13 +18,11 @@ export const baseStyle: StyleSpecification = {
     },
     streets: {
       type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-      ],
+      // Esri World Street Map: gratuito y sin clave (CARTO ahora exige API key)
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
-      maxzoom: 20,
-      attribution: '© OpenStreetMap © CARTO',
+      maxzoom: 19,
+      attribution: 'Mapa © Esri, HERE, Garmin, © OpenStreetMap',
     },
     places: {
       type: 'raster',
