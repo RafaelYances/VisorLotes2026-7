@@ -113,5 +113,7 @@ Es un sitio estático (`npm run build` → carpeta `dist/`). Funciona tal cual e
 
 ## Mapas
 
-- Satélite: Esri World Imagery (gratuito, con atribución). En esa zona hay imagen hasta zoom 18; por encima se amplía.
-- Mapa: Esri World Street Map (sin clave). Tipografías de rótulos: OpenFreeMap.
+- **Satélite (vista híbrida):** imagen de Esri World Imagery con las etiquetas y vías de OpenStreetMap encima (veredas, playas, vías, negocios), en español cuando existe el nombre.
+- **Mapa:** OpenFreeMap, estilo *Liberty* (datos de OpenStreetMap). Gratis, sin clave y con uso comercial permitido.
+- Si OpenFreeMap no responde, el visor usa automáticamente un mapa de respaldo de Esri.
+- Las etiquetas salen de OpenStreetMap: si un negocio o lugar de la zona no aparece, cualquiera puede agregarlo gratis en <https://www.openstreetmap.org> y se verá en el visor tras la siguiente actualización de OpenFreeMap (normalmente en pocos días).

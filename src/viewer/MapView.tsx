@@ -2,7 +2,7 @@ import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MLMa
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { STATUS } from '../config';
 import { m2 } from '../lib/format';
-import { baseStyle, FONT, FONT_BOLD, type BaseLayer } from '../lib/mapStyle';
+import { applyBase, buildStyle, FONT, FONT_BOLD, osmLabelLayers, type BaseLayer } from '../lib/mapStyle';
 import type { Lot, Project } from '../types';
 
 export interface MapHandle {
@@ -51,6 +51,8 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   const prevSel = useRef<string | null>(null);
   const paddingRef = useRef(padding);
   paddingRef.current = padding;
+  const baseRef = useRef(base);
+  baseRef.current = base;
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const lotsById = useRef(new Map<string, Lot>());
@@ -59,295 +61,357 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   // ---------------------------------------------------------------- init
   useEffect(() => {
     if (!el.current) return;
-    const [w, s, e, n] = project.bounds;
-    const map = new maplibregl.Map({
-      container: el.current,
-      style: baseStyle,
-      bounds: [
-        [w, s],
-        [e, n],
-      ] as LngLatBoundsLike,
-      fitBoundsOptions: { padding: { ...padding, top: padding.top + 30 } },
-      maxZoom: 21,
-      minZoom: 12,
-      attributionControl: { compact: true },
-      dragRotate: true,
-      pitchWithRotate: false,
-      touchPitch: false,
-    });
-    mapRef.current = map;
-    map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 110 }), 'bottom-left');
-    map.on('rotate', () => onBearing?.(map.getBearing()));
+    let instance: MLMap | null = null;
+    let cancelled = false;
+    const setup = (style: maplibregl.StyleSpecification) => {
+      const container = el.current;
+      if (!container) return;
+      const [w, s, e, n] = project.bounds;
+      const map = new maplibregl.Map({
+        container,
+        style,
+        bounds: [
+          [w, s],
+          [e, n],
+        ] as LngLatBoundsLike,
+        fitBoundsOptions: { padding: { ...padding, top: padding.top + 30 } },
+        maxZoom: 21,
+        minZoom: 12,
+        attributionControl: false,
+        dragRotate: true,
+        pitchWithRotate: false,
+        touchPitch: false,
+      });
+      mapRef.current = map;
+      instance = map;
+      map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 110 }), 'bottom-left');
+      // Créditos de los mapas a la izquierda: a la derecha quedarían ocultos tras el panel
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+      map.on('rotate', () => onBearing?.(map.getBearing()));
 
-    map.on('load', () => {
-      map.addSource('roads', { type: 'geojson', data: { type: 'FeatureCollection', features: project.roads.map((r) => poly(r)) } });
-      map.addSource('greens', { type: 'geojson', data: { type: 'FeatureCollection', features: project.greens.map((r) => poly(r)) } });
-      map.addSource('lots', {
-        type: 'geojson',
-        promoteId: 'id',
-        data: {
-          type: 'FeatureCollection',
-          features: project.lots.map((l) =>
-            poly(l.coords, { id: l.id, status: l.status, numero: l.numero, color: STATUS[l.status].color }),
-          ),
-        },
-      });
-      map.addSource('lot-points', {
-        type: 'geojson',
-        promoteId: 'id',
-        data: {
-          type: 'FeatureCollection',
-          features: project.lots.map((l) => ({
-            type: 'Feature',
-            properties: { id: l.id, numero: l.numero },
-            geometry: { type: 'Point', coordinates: l.center },
-          })),
-        },
-      });
-      map.addSource('manzanas', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: project.manzanas.map((mz) => ({
-            type: 'Feature',
-            properties: { name: `Mz ${mz.name}` },
-            geometry: { type: 'Point', coordinates: mz.center },
-          })),
-        },
-      });
-      map.addSource('labels', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: project.labels.map((l) => ({
-            type: 'Feature',
-            properties: l,
-            geometry: { type: 'Point', coordinates: [l.lng, l.lat] },
-          })),
-        },
-      });
-      map.addSource('house', { type: 'geojson', data: EMPTY });
+      map.on('load', () => {
+        map.addSource('roads', { type: 'geojson', data: { type: 'FeatureCollection', features: project.roads.map((r) => poly(r)) } });
+        map.addSource('greens', { type: 'geojson', data: { type: 'FeatureCollection', features: project.greens.map((r) => poly(r)) } });
+        map.addSource('lots', {
+          type: 'geojson',
+          promoteId: 'id',
+          data: {
+            type: 'FeatureCollection',
+            features: project.lots.map((l) =>
+              poly(l.coords, { id: l.id, status: l.status, numero: l.numero, color: STATUS[l.status].color }),
+            ),
+          },
+        });
+        map.addSource('lot-points', {
+          type: 'geojson',
+          promoteId: 'id',
+          data: {
+            type: 'FeatureCollection',
+            features: project.lots.map((l) => ({
+              type: 'Feature',
+              properties: { id: l.id, numero: l.numero },
+              geometry: { type: 'Point', coordinates: l.center },
+            })),
+          },
+        });
+        map.addSource('manzanas', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: project.manzanas.map((mz) => ({
+              type: 'Feature',
+              properties: { name: `Mz ${mz.name}` },
+              geometry: { type: 'Point', coordinates: mz.center },
+            })),
+          },
+        });
+        map.addSource('labels', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: project.labels.map((l) => ({
+              type: 'Feature',
+              properties: l,
+              geometry: { type: 'Point', coordinates: [l.lng, l.lat] },
+            })),
+          },
+        });
+        map.addSource('house', { type: 'geojson', data: EMPTY });
 
-      map.addLayer({ id: 'greens', type: 'fill', source: 'greens', paint: { 'fill-color': '#22c55e', 'fill-opacity': 0.55 } });
-      map.addLayer({ id: 'roads', type: 'fill', source: 'roads', paint: { 'fill-color': '#cbd5e1', 'fill-opacity': 0.82 } });
-      map.addLayer({
-        id: 'roads-line',
-        type: 'line',
-        source: 'roads',
-        paint: { 'line-color': '#ffffff', 'line-width': 1, 'line-opacity': 0.7 },
-      });
+        map.addLayer({ id: 'greens', type: 'fill', source: 'greens', paint: { 'fill-color': '#22c55e', 'fill-opacity': 0.55 } });
+        map.addLayer({ id: 'roads', type: 'fill', source: 'roads', paint: { 'fill-color': '#cbd5e1', 'fill-opacity': 0.82 } });
+        map.addLayer({
+          id: 'roads-line',
+          type: 'line',
+          source: 'roads',
+          paint: { 'line-color': '#ffffff', 'line-width': 1, 'line-opacity': 0.7 },
+        });
 
-      map.addLayer({
-        id: 'lots-fill',
-        type: 'fill',
-        source: 'lots',
-        paint: {
-          'fill-color': ['get', 'color'],
-          'fill-opacity': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            16,
-            [
-              'case',
-              ['boolean', ['feature-state', 'dim'], false],
-              0.12,
-              ['boolean', ['feature-state', 'selected'], false],
-              0.9,
-              ['boolean', ['feature-state', 'hover'], false],
-              0.8,
-              0.62,
+        map.addLayer({
+          id: 'lots-fill',
+          type: 'fill',
+          source: 'lots',
+          paint: {
+            'fill-color': ['get', 'color'],
+            'fill-opacity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              16,
+              [
+                'case',
+                ['boolean', ['feature-state', 'dim'], false],
+                0.12,
+                ['boolean', ['feature-state', 'selected'], false],
+                0.9,
+                ['boolean', ['feature-state', 'hover'], false],
+                0.8,
+                0.62,
+              ],
+              19.5,
+              [
+                'case',
+                ['boolean', ['feature-state', 'dim'], false],
+                0.08,
+                ['boolean', ['feature-state', 'selected'], false],
+                0.5,
+                ['boolean', ['feature-state', 'hover'], false],
+                0.5,
+                0.3,
+              ],
             ],
-            19.5,
-            [
+            'fill-opacity-transition': { duration: 250 },
+          },
+        });
+        map.addLayer({
+          id: 'lots-line',
+          type: 'line',
+          source: 'lots',
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0.4, 18, 1.4, 20, 2.2],
+            'line-opacity': ['case', ['boolean', ['feature-state', 'dim'], false], 0.35, 0.95],
+          },
+        });
+        map.addLayer({
+          id: 'lots-selected-glow',
+          type: 'line',
+          source: 'lots',
+          paint: {
+            'line-color': '#a7f3d0',
+            'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 12, 0],
+            'line-blur': 8,
+            'line-opacity': 0.9,
+          },
+        });
+        map.addLayer({
+          id: 'lots-selected',
+          type: 'line',
+          source: 'lots',
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': [
               'case',
-              ['boolean', ['feature-state', 'dim'], false],
-              0.08,
               ['boolean', ['feature-state', 'selected'], false],
-              0.5,
+              3.5,
               ['boolean', ['feature-state', 'hover'], false],
-              0.5,
-              0.3,
+              2.5,
+              0,
             ],
-          ],
-          'fill-opacity-transition': { duration: 250 },
-        },
-      });
-      map.addLayer({
-        id: 'lots-line',
-        type: 'line',
-        source: 'lots',
-        paint: {
-          'line-color': '#ffffff',
-          'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0.4, 18, 1.4, 20, 2.2],
-          'line-opacity': ['case', ['boolean', ['feature-state', 'dim'], false], 0.35, 0.95],
-        },
-      });
-      map.addLayer({
-        id: 'lots-selected-glow',
-        type: 'line',
-        source: 'lots',
-        paint: {
-          'line-color': '#a7f3d0',
-          'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 12, 0],
-          'line-blur': 8,
-          'line-opacity': 0.9,
-        },
-      });
-      map.addLayer({
-        id: 'lots-selected',
-        type: 'line',
-        source: 'lots',
-        paint: {
-          'line-color': '#ffffff',
-          'line-width': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            3.5,
-            ['boolean', ['feature-state', 'hover'], false],
-            2.5,
-            0,
-          ],
-        },
-      });
+          },
+        });
 
-      // Casa sobre el lote
-      map.addLayer({
-        id: 'house-fill',
-        type: 'fill',
-        source: 'house',
-        paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': ['case', ['==', ['get', 'role'], 'buildable'], 0, 0.95] },
-      });
-      map.addLayer({
-        id: 'house-line',
-        type: 'line',
-        source: 'house',
-        paint: {
-          'line-color': ['case', ['==', ['get', 'role'], 'buildable'], '#fde68a', '#334155'],
-          'line-width': ['case', ['==', ['get', 'role'], 'buildable'], 1.6, 1],
-          'line-dasharray': ['case', ['==', ['get', 'role'], 'buildable'], ['literal', [2, 2]], ['literal', [1, 0]]],
-        },
-      });
-      map.addLayer({
-        id: 'house-labels',
-        type: 'symbol',
-        source: 'house',
-        minzoom: 19,
-        filter: ['==', ['get', 'role'], 'room'],
-        layout: {
-          'text-field': ['get', 'label'],
-          'text-font': FONT,
-          'text-size': ['interpolate', ['linear'], ['zoom'], 19, 8, 21, 13],
-          'text-rotation-alignment': 'viewport',
-          'text-allow-overlap': false,
-        },
-        paint: { 'text-color': '#1e293b', 'text-halo-color': 'rgba(255,255,255,0.8)', 'text-halo-width': 1 },
-      });
+        // Casa sobre el lote
+        map.addLayer({
+          id: 'house-fill',
+          type: 'fill',
+          source: 'house',
+          paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': ['case', ['==', ['get', 'role'], 'buildable'], 0, 0.95] },
+        });
+        map.addLayer({
+          id: 'house-line',
+          type: 'line',
+          source: 'house',
+          paint: {
+            'line-color': ['case', ['==', ['get', 'role'], 'buildable'], '#fde68a', '#334155'],
+            'line-width': ['case', ['==', ['get', 'role'], 'buildable'], 1.6, 1],
+            'line-dasharray': ['case', ['==', ['get', 'role'], 'buildable'], ['literal', [2, 2]], ['literal', [1, 0]]],
+          },
+        });
+        map.addLayer({
+          id: 'house-labels',
+          type: 'symbol',
+          source: 'house',
+          minzoom: 19,
+          filter: ['==', ['get', 'role'], 'room'],
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-font': FONT,
+            'text-size': ['interpolate', ['linear'], ['zoom'], 19, 8, 21, 13],
+            'text-rotation-alignment': 'viewport',
+            'text-allow-overlap': false,
+          },
+          paint: { 'text-color': '#1e293b', 'text-halo-color': 'rgba(255,255,255,0.8)', 'text-halo-width': 1 },
+        });
 
-      map.addLayer({
-        id: 'lot-numbers',
-        type: 'symbol',
-        source: 'lot-points',
-        minzoom: 17.2,
-        layout: {
-          'text-field': ['get', 'numero'],
-          'text-font': FONT_BOLD,
-          'text-size': ['interpolate', ['linear'], ['zoom'], 17.2, 10, 20, 18],
-          'text-allow-overlap': true,
-        },
-        paint: {
-          'text-color': '#ffffff',
-          'text-halo-color': 'rgba(2,44,34,0.75)',
-          'text-halo-width': 1.4,
-          'text-opacity': ['case', ['boolean', ['feature-state', 'dim'], false], 0.3, 1],
-        },
-      });
-      map.addLayer({
-        id: 'manzana-labels',
-        type: 'symbol',
-        source: 'manzanas',
-        minzoom: 15.3,
-        maxzoom: 17.2,
-        layout: { 'text-field': ['get', 'name'], 'text-font': FONT_BOLD, 'text-size': 12, 'text-allow-overlap': true },
-        paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(2,44,34,0.85)', 'text-halo-width': 1.6 },
-      });
-      map.addLayer({
-        id: 'cad-labels',
-        type: 'symbol',
-        source: 'labels',
-        minzoom: 15.5,
-        layout: {
-          'text-field': ['get', 'text'],
-          'text-font': FONT_BOLD,
-          'text-size': [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            15.5,
-            ['*', ['get', 'size'], 0.8],
-            18,
-            ['*', ['get', 'size'], 2.2],
-            20,
-            ['*', ['get', 'size'], 7],
-          ],
-          'text-rotate': ['get', 'angle'],
-          'text-rotation-alignment': 'map',
-          'text-pitch-alignment': 'map',
-          'text-letter-spacing': 0.08,
-          'text-allow-overlap': true,
-        },
-        paint: {
-          'text-color': ['match', ['get', 'kind'], 'stage', '#fde68a', '#ffffff'],
-          'text-halo-color': 'rgba(2,44,34,0.8)',
-          'text-halo-width': 1.4,
-        },
-      });
+        map.addLayer({
+          id: 'lot-numbers',
+          type: 'symbol',
+          source: 'lot-points',
+          minzoom: 17.2,
+          layout: {
+            'text-field': ['get', 'numero'],
+            'text-font': FONT_BOLD,
+            'text-size': ['interpolate', ['linear'], ['zoom'], 17.2, 10, 20, 18],
+            'text-allow-overlap': true,
+          },
+          paint: {
+            'text-color': '#ffffff',
+            'text-halo-color': 'rgba(2,44,34,0.75)',
+            'text-halo-width': 1.4,
+            'text-opacity': ['case', ['boolean', ['feature-state', 'dim'], false], 0.3, 1],
+          },
+        });
+        map.addLayer({
+          id: 'manzana-labels',
+          type: 'symbol',
+          source: 'manzanas',
+          minzoom: 15.3,
+          maxzoom: 17.2,
+          layout: { 'text-field': ['get', 'name'], 'text-font': FONT_BOLD, 'text-size': 12, 'text-allow-overlap': true },
+          paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(2,44,34,0.85)', 'text-halo-width': 1.6 },
+        });
+        map.addLayer({
+          id: 'cad-labels',
+          type: 'symbol',
+          source: 'labels',
+          minzoom: 15.5,
+          layout: {
+            'text-field': ['get', 'text'],
+            'text-font': FONT_BOLD,
+            'text-size': [
+              'interpolate',
+              ['exponential', 2],
+              ['zoom'],
+              15.5,
+              ['*', ['get', 'size'], 0.8],
+              18,
+              ['*', ['get', 'size'], 2.2],
+              20,
+              ['*', ['get', 'size'], 7],
+            ],
+            'text-rotate': ['get', 'angle'],
+            'text-rotation-alignment': 'map',
+            'text-pitch-alignment': 'map',
+            'text-letter-spacing': 0.08,
+            'text-allow-overlap': true,
+          },
+          paint: {
+            'text-color': ['match', ['get', 'kind'], 'stage', '#fde68a', '#ffffff'],
+            'text-halo-color': 'rgba(2,44,34,0.8)',
+            'text-halo-width': 1.4,
+          },
+        });
 
-      // Interacción
-      let hovered: string | null = null;
-      const setHoverFeature = (id: string | null) => {
-        if (hovered) map.setFeatureState({ source: 'lots', id: hovered }, { hover: false });
-        hovered = id;
-        if (id) map.setFeatureState({ source: 'lots', id }, { hover: true });
-      };
-      map.on('mousemove', 'lots-fill', (e) => {
-        const id = e.features?.[0]?.properties?.id as string | undefined;
-        if (!id) return;
-        map.getCanvas().style.cursor = 'pointer';
-        if (id !== hovered) setHoverFeature(id);
-        const lot = lotsById.current.get(id);
-        if (lot) setHover({ lot, x: e.point.x, y: e.point.y });
-      });
-      map.on('mouseleave', 'lots-fill', () => {
-        map.getCanvas().style.cursor = '';
-        setHoverFeature(null);
-        setHover(null);
-      });
-      map.on('click', (e) => {
-        const f = map.queryRenderedFeatures(e.point, { layers: ['lots-fill'] })[0];
-        onSelectRef.current((f?.properties?.id as string) ?? null);
-      });
+        // Interacción
+        let hovered: string | null = null;
+        const setHoverFeature = (id: string | null) => {
+          if (hovered) map.setFeatureState({ source: 'lots', id: hovered }, { hover: false });
+          hovered = id;
+          if (id) map.setFeatureState({ source: 'lots', id }, { hover: true });
+        };
+        map.on('mousemove', 'lots-fill', (e) => {
+          const id = e.features?.[0]?.properties?.id as string | undefined;
+          if (!id) return;
+          map.getCanvas().style.cursor = 'pointer';
+          if (id !== hovered) setHoverFeature(id);
+          const lot = lotsById.current.get(id);
+          if (lot) setHover({ lot, x: e.point.x, y: e.point.y });
+        });
+        map.on('mouseleave', 'lots-fill', () => {
+          map.getCanvas().style.cursor = '';
+          setHoverFeature(null);
+          setHover(null);
+        });
+        map.on('click', (e) => {
+          const f = map.queryRenderedFeatures(e.point, { layers: ['lots-fill'] })[0];
+          onSelectRef.current((f?.properties?.id as string) ?? null);
+        });
 
-      // Puntos de interés (salidas al mar)
-      for (const p of project.pois) {
-        const el = document.createElement('div');
-        el.className =
-          'flex items-center gap-1.5 rounded-full bg-sky-500 py-1 pl-1 pr-2.5 text-[11px] font-bold text-white shadow-lg ring-2 ring-white/80';
-        el.innerHTML =
-          '<span class="grid size-5 place-items-center rounded-full bg-white/25"><svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg></span>' +
-          `<span>${p.name}${p.minutes ? ` · ${p.minutes} min` : ''}</span>`;
-        new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([p.lng, p.lat]).addTo(map);
-      }
+        // Nombre del proyecto cuando se aleja el mapa (para encontrarlo siempre)
+        map.addSource('project-point', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: [
+              {
+                type: 'Feature',
+                properties: { name: project.name },
+                geometry: { type: 'Point', coordinates: [project.location.lng, project.location.lat] },
+              },
+            ],
+          },
+        });
+        map.addLayer({
+          id: 'project-dot',
+          type: 'circle',
+          source: 'project-point',
+          maxzoom: 15.3,
+          paint: { 'circle-radius': 7, 'circle-color': '#10b981', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 },
+        });
+        map.addLayer({
+          id: 'project-name',
+          type: 'symbol',
+          source: 'project-point',
+          maxzoom: 15.3,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-font': FONT_BOLD,
+            'text-size': 15,
+            'text-anchor': 'left',
+            'text-offset': [1, 0],
+            'text-allow-overlap': true,
+          },
+          paint: { 'text-color': '#ffffff', 'text-halo-color': '#047857', 'text-halo-width': 2.2 },
+        });
 
-      loadedRef.current = true;
-      setLoaded(true);
-      pending.current?.();
-      pending.current = null;
+        // Puntos de interés (salidas al mar): se ocultan al alejarse para no tapar el proyecto
+        const poiEls: HTMLElement[] = [];
+        const syncPois = () => {
+          const show = map.getZoom() >= 15;
+          for (const el of poiEls) el.style.display = show ? '' : 'none';
+        };
+        map.on('zoom', syncPois);
+        for (const p of project.pois) {
+          const el = document.createElement('div');
+          el.className =
+            'flex items-center gap-1.5 rounded-full bg-sky-500 py-1 pl-1 pr-2.5 text-[11px] font-bold text-white shadow-lg ring-2 ring-white/80';
+          el.innerHTML =
+            '<span class="grid size-5 place-items-center rounded-full bg-white/25"><svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg></span>' +
+            `<span>${p.name}${p.minutes ? ` · ${p.minutes} min` : ''}</span>`;
+          new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([p.lng, p.lat]).addTo(map);
+          poiEls.push(el);
+        }
+        syncPois();
+
+        // Etiquetas de OSM por encima de los lotes, pero debajo de los rótulos propios
+        for (const id of osmLabelLayers(map)) map.moveLayer(id, 'house-labels');
+        applyBase(map, baseRef.current);
+
+        loadedRef.current = true;
+        setLoaded(true);
+        pending.current?.();
+        pending.current = null;
+      });
+    };
+    buildStyle().then((style) => {
+      if (!cancelled) setup(style);
     });
 
     return () => {
+      cancelled = true;
       loadedRef.current = false;
-      map.remove();
+      instance?.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -357,9 +421,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
-    map.setLayoutProperty('satellite', 'visibility', base === 'satellite' ? 'visible' : 'none');
-    map.setLayoutProperty('places', 'visibility', base === 'satellite' ? 'visible' : 'none');
-    map.setLayoutProperty('streets', 'visibility', base === 'streets' ? 'visible' : 'none');
+    applyBase(map, base);
   }, [base, loaded]);
 
   // ------------------------------------------------------------- selection
