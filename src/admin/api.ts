@@ -67,6 +67,7 @@ export const adminApi = {
   login: (password: string, code: string) => call<{ ok: true }>('login', { password, code }),
   logout: () => call<{ ok: true }>('logout', {}),
   logoutAll: () => call<{ ok: true }>('logout-all', {}),
+  changePassword: (current: string, code: string, next: string) => call<{ ok: true }>('password', { current, code, next }),
   saveLots: (project: string, changes: LotChange[]) => call<{ ok: true; updated: number }>('lots', { project, changes }),
   audit: () => call<{ items: AuditItem[] }>('audit'),
   gallery: (project: string) => call<{ items: GalleryItem[] }>(`gallery?project=${encodeURIComponent(project)}`),

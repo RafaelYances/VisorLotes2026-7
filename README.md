@@ -51,6 +51,10 @@ src/
 
 El navegador **ya no lee el DXF**: el script lo convierte una sola vez en JSON (78 KB para 108 lotes), con área, perímetro, frente, fondo, lados, colindancias y orientación ya calculados desde las coordenadas UTM originales.
 
+## Seguridad
+
+Ver **[SECURITY.md](SECURITY.md)**: medidas implementadas, lista de tareas del administrador, recuperación de acceso y copias de seguridad.
+
 ## Panel de administración (`/admin`)
 
 Gestiona el sitio sin tocar código, con efecto inmediato en el visor:

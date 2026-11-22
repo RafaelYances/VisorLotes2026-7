@@ -155,12 +155,12 @@ export function applyBase(map: MLMap, base: BaseLayer, provider: Provider = 'fre
   if (!store) originals.set(map, (store = new Map()));
   const save = (id: string, prop: string) => {
     const key = `${id}|${prop}`;
-    if (!store!.has(key)) store!.set(key, { v: map.getPaintProperty(id, prop) });
+    if (!store!.has(key)) store!.set(key, { v: map.getPaintProperty(id, prop as never) });
     return store!.get(key)!.v;
   };
   const setPaint = (id: string, prop: string, satValue: unknown) => {
     const original = save(id, prop);
-    map.setPaintProperty(id, prop, sat ? satValue : original);
+    map.setPaintProperty(id, prop as never, (sat ? satValue : original) as never);
   };
 
   for (const l of map.getStyle().layers) {

@@ -191,7 +191,22 @@ function validPlan(p: Record<string, unknown>) {
     if (!['available', 'reserved', 'sold'].includes(l.status as string)) return 'Estado de lote inválido';
   }
   for (const k of ['bounds', 'manzanas', 'roads', 'greens', 'labels', 'pois']) if (!Array.isArray(p[k])) return `Falta "${k}" en el plano`;
-  for (const l of p.labels as { text?: unknown }[]) if (typeof l.text !== 'string' || l.text.length > 120) return 'Rótulo inválido';
+  for (const l of p.labels as { text?: unknown }[])
+    if (typeof l.text !== 'string' || l.text.length > 120 || /[<>]/.test(l.text)) return 'Rótulo inválido';
+  for (const poi of p.pois as { name?: unknown; lng?: unknown; lat?: unknown; minutes?: unknown }[]) {
+    if (typeof poi.name !== 'string' || poi.name.length > 80 || /[<>]/.test(poi.name)) return 'Punto de interés inválido';
+    if (!Number.isFinite(poi.lng as number) || !Number.isFinite(poi.lat as number)) return 'Punto de interés inválido';
+    if (poi.minutes != null && !Number.isFinite(poi.minutes as number)) return 'Punto de interés inválido';
+  }
+  for (const l of lots) {
+    for (const k of ['manzana', 'numero'] as const)
+      if (typeof l[k] !== 'string' || !/^[A-Za-z0-9]{1,10}$/.test(l[k] as string)) return 'Lote inválido';
+    if (
+      !Array.isArray(l.sides) ||
+      (l.sides as { colinda?: unknown }[]).some((sd) => typeof sd.colinda !== 'string' || sd.colinda.length > 60 || /[<>]/.test(sd.colinda))
+    )
+      return 'Lote inválido';
+  }
   return null;
 }
 
@@ -415,4 +430,25 @@ export async function projectsAdmin(env: Env, req: Request, path: string, ip: st
   }
 
   return fail(404, 'No encontrado');
+}
+
+/**
+ * Archivos de datos publicados del repositorio (/data/projects*): se ocultan los
+ * proyectos ocultos o eliminados desde el panel.
+ */
+export async function guardStaticData(env: Env, req: Request, path: string) {
+  if (path === '/data/projects.json') {
+    const [cards, rows] = await Promise.all([staticCards(env, req), rowsBySlug(env.DB)]);
+    const visible = cards.filter((c) => {
+      const r = rows.get(c.slug);
+      return !r || (r.visible && !r.deleted);
+    });
+    return json(visible, 200, { 'Cache-Control': 'public, max-age=30' });
+  }
+  const m = path.match(/^\/data\/projects\/([a-z0-9-]{1,60})\.json$/);
+  if (m) {
+    const row = await getRow(env.DB, m[1]);
+    if (row && (row.deleted || !row.visible)) return fail(404, 'No encontrado');
+  }
+  return env.ASSETS.fetch(req);
 }

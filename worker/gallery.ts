@@ -130,6 +130,8 @@ export async function serveFile(env: Env, req: Request, key: string) {
     'Content-Disposition': 'inline',
     'Accept-Ranges': 'bytes',
     'Cross-Origin-Resource-Policy': 'same-origin',
+    // Si alguien abre el archivo directamente, nunca puede ejecutar código
+    'Content-Security-Policy': "default-src 'none'; img-src 'self'; media-src 'self'; sandbox",
   });
   const range = req.headers.get('Range');
   const m = range?.match(/^bytes=(\d+)-(\d*)$/);

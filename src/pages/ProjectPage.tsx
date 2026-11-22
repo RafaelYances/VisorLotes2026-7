@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { ArrowLeft, Compass, Expand, LocateFixed, Minus, Plus, Scan, Search, SlidersHorizontal, X } from 'lucide-react';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

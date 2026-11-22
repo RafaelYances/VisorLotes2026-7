@@ -8,7 +8,7 @@ import { hashPassword, newTotpSecret, safeEqual, verifyPassword, verifyTotp } fr
 import { audit, ensureSchema } from './db';
 import { galleryAdmin, galleryPublic, gallerySummary, serveFile } from './gallery';
 import { body, fail, json, sameOrigin } from './http';
-import { lotIds, projectsAdmin, projectsPublic } from './projects';
+import { guardStaticData, loadDetail, lotIds, projectsAdmin, projectsPublic } from './projects';
 
 // Rutas de subida de archivos (multipart): validan su origen por su cuenta
 const MULTIPART = new Set(['/api/admin/gallery/upload', '/api/admin/projects/logo']);
@@ -37,11 +37,21 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
       .all<{ project: string; lot: string; status: string; price: number | null }>();
     const out: Record<string, Record<string, [string, number | null]>> = {};
     for (const r of results) (out[r.project] ??= {})[r.lot] = [r.status, r.price];
-    return json({ overrides: out, gallery: await gallerySummary(db) }, 200, { 'Cache-Control': 'public, max-age=5' });
+    const gallery = await gallerySummary(db);
+    // No exponer datos de proyectos ocultos o eliminados
+    const { results: hidden } = await db.prepare('SELECT slug FROM projects WHERE visible = 0 OR deleted = 1').all<{ slug: string }>();
+    for (const h of hidden) {
+      delete out[h.slug];
+      delete gallery[h.slug];
+    }
+    return json({ overrides: out, gallery }, 200, { 'Cache-Control': 'public, max-age=5' });
   }
 
   const gm = path.match(/^\/api\/public\/gallery\/([a-z0-9-]{1,60})$/);
-  if (gm && method === 'GET') return galleryPublic(env, gm[1]);
+  if (gm && method === 'GET') {
+    if (!(await loadDetail(env, req, gm[1]))) return fail(404, 'No encontrado'); // oculto o inexistente
+    return galleryPublic(env, gm[1]);
+  }
 
   if (path.startsWith('/api/public/project') && method === 'GET') {
     const r = await projectsPublic(env, req, path);
@@ -170,6 +180,28 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     return json({ ok: true, updated: b.changes.length });
   }
 
+  if (path === '/api/admin/password' && method === 'POST') {
+    if (await isThrottled(db, ip)) return fail(429, 'Demasiados intentos fallidos. Espera 15 minutos.');
+    const b = await body<{ current?: string; code?: string; next?: string }>(req);
+    const admin = await adminRow(db);
+    const passOk = !!admin && !!b?.current && (await verifyPassword(b.current, admin.pass));
+    const step = passOk ? await verifyTotp(admin!.totp, String(b?.code ?? '').replace(/\s/g, ''), admin!.totp_last) : null;
+    if (!passOk || step == null) {
+      await recordAttempt(db, ip, false);
+      await audit(db, 'stepup_failed', null, { action: 'password' }, ip);
+      return fail(401, 'Contraseña actual o código incorrectos');
+    }
+    if (!strongPassword(b!.next || '')) return fail(400, 'La nueva contraseña debe tener al menos 12 caracteres, con letras y números');
+    if (b!.next === b!.current) return fail(400, 'La nueva contraseña debe ser distinta de la actual');
+    await db
+      .prepare('UPDATE admin SET pass = ?, totp_last = ? WHERE id = 1')
+      .bind(await hashPassword(b!.next!), step)
+      .run();
+    await destroyAllSessions(db); // cierra todas las demás sesiones
+    await audit(db, 'password_change', null, {}, ip);
+    return json({ ok: true }, 200, { 'Set-Cookie': await createSession(db, req) });
+  }
+
   if (path.startsWith('/api/admin/gallery')) return galleryAdmin(env, req, path, ip);
   if (path.startsWith('/api/admin/project')) return projectsAdmin(env, req, path, ip);
 
@@ -190,6 +222,15 @@ export default {
       } catch (e) {
         console.error(e);
         return fail(500, 'Error interno');
+      }
+    }
+    if (url.pathname.startsWith('/data/projects')) {
+      try {
+        await ensureSchema(env.DB);
+        return await guardStaticData(env, req, url.pathname);
+      } catch (e) {
+        console.error(e);
+        return env.ASSETS.fetch(req);
       }
     }
     if (url.pathname.startsWith('/files/') && (req.method === 'GET' || req.method === 'HEAD')) {

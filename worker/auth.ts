@@ -67,6 +67,10 @@ export async function isThrottled(db: D1Database, ip: string) {
     .bind(ip, now - IP_WINDOW)
     .first<{ n: number }>();
   if ((perIp?.n ?? 0) >= IP_MAX_FAILS) return true;
+  // Una conexión que ya ingresó con éxito en las últimas 24 h no queda bloqueada por
+  // el límite global (así un atacante no puede dejarte por fuera a propósito)
+  const trusted = await db.prepare('SELECT 1 FROM login_attempts WHERE ip = ? AND ok = 1 LIMIT 1').bind(ip).first();
+  if (trusted) return false;
   const global = await db
     .prepare('SELECT COUNT(*) AS n FROM login_attempts WHERE ok = 0 AND ts > ?')
     .bind(now - GLOBAL_WINDOW)

@@ -506,6 +506,7 @@ const ACTION: Record<string, string> = {
   project_hide: 'Proyecto ocultado',
   project_delete: 'Proyecto eliminado',
   stepup_failed: 'Doble autorización fallida',
+  password_change: 'Contraseña cambiada',
   lots: 'Cambio de lotes',
   gallery_add: 'Foto o video agregado',
   gallery_update: 'Galería reordenada / editada',
@@ -557,12 +558,83 @@ function AuditList({ onError, onLogoutAll }: { onError: (e: unknown) => void; on
         })}
       </ul>
       {!items && <Loader2 className="mx-auto mt-8 size-5 animate-spin text-slate-400" />}
+      <ChangePassword />
       <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-xs text-amber-900 ring-1 ring-amber-200">
         ¿Ves ingresos que no reconoces? Cierra todas las sesiones y cambia tu contraseña.
         <button onClick={onLogoutAll} className="mt-2 block font-bold text-amber-800 underline">
           Cerrar todas las sesiones
         </button>
       </div>
+    </div>
+  );
+}
+
+function ChangePassword() {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const f = new FormData(form);
+    if (f.get('next') !== f.get('next2')) return setMsg({ ok: false, text: 'Las contraseñas nuevas no coinciden' });
+    setBusy(true);
+    setMsg(null);
+    try {
+      await adminApi.changePassword(String(f.get('current')), String(f.get('code')).replace(/\s/g, ''), String(f.get('next')));
+      form.reset();
+      setMsg({ ok: true, text: 'Contraseña cambiada. Se cerraron las demás sesiones.' });
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : 'Error' });
+    } finally {
+      setBusy(false);
+    }
+  }
+  const cls = 'focus:border-brand-500 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none';
+  return (
+    <div className="mt-6 rounded-2xl p-4 ring-1 ring-slate-200">
+      <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-sm font-extrabold text-slate-900">
+        Cambiar contraseña <span className="text-brand-700 text-xs font-bold">{open ? 'Cerrar' : 'Abrir'}</span>
+      </button>
+      {open && (
+        <form onSubmit={submit} className="mt-3 space-y-2">
+          <input name="current" type="password" autoComplete="current-password" placeholder="Contraseña actual" required className={cls} />
+          <input
+            name="next"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Nueva contraseña (mín. 12, letras y números)"
+            minLength={12}
+            required
+            className={cls}
+          />
+          <input
+            name="next2"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Repite la nueva contraseña"
+            minLength={12}
+            required
+            className={cls}
+          />
+          <input
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={7}
+            placeholder="Código de 6 dígitos"
+            required
+            className={cls}
+          />
+          {msg && <p className={cx('text-xs font-semibold', msg.ok ? 'text-brand-700' : 'text-rose-600')}>{msg.text}</p>}
+          <button
+            disabled={busy}
+            className="bg-brand-600 hover:bg-brand-700 h-10 w-full rounded-lg text-sm font-bold text-white disabled:opacity-60"
+          >
+            Cambiar contraseña
+          </button>
+        </form>
+      )}
     </div>
   );
 }

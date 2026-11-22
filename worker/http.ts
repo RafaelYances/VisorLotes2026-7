@@ -5,6 +5,8 @@ export const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'X-Frame-Options': 'DENY',
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
 };
 
 export function json(data: unknown, status = 200, extra: Record<string, string> = {}) {
@@ -25,7 +27,9 @@ export async function body<T = Json>(req: Request): Promise<T | null> {
   const len = Number(req.headers.get('Content-Length') || 0);
   if (len > 200_000) return null;
   try {
-    return (await req.json()) as T;
+    const text = await req.text();
+    if (text.length > 200_000) return null; // por si no declaró su tamaño
+    return JSON.parse(text) as T;
   } catch {
     return null;
   }

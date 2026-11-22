@@ -9,7 +9,7 @@
     // Rutas como /proyecto/... se resuelven en la app
     "not_found_handling": "single-page-application",
     // Solo /api/* pasa por el Worker; el resto lo sirve Cloudflare directamente
-    "run_worker_first": ["/api/*", "/files/*"]
+    "run_worker_first": ["/api/*", "/files/*", "/data/projects.json", "/data/projects/*"]
   },
   "d1_databases": [
     {

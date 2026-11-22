@@ -1,4 +1,5 @@
-import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MLMap } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { GeoJSONSource, LngLatBoundsLike, Map as MLMap } from 'maplibre-gl';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { STATUS } from '../config';
 import { m2 } from '../lib/format';
@@ -391,9 +392,14 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
           const el = document.createElement('div');
           el.className =
             'flex items-center gap-1.5 rounded-full bg-sky-500 py-1 pl-1 pr-2.5 text-[11px] font-bold text-white shadow-lg ring-2 ring-white/80';
-          el.innerHTML =
-            '<span class="grid size-5 place-items-center rounded-full bg-white/25"><svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg></span>' +
-            `<span>${p.name}${p.minutes ? ` · ${p.minutes} min` : ''}</span>`;
+          // Ícono fijo (HTML propio) + texto del plano insertado como TEXTO, nunca como HTML
+          const icon = document.createElement('span');
+          icon.className = 'grid size-5 place-items-center rounded-full bg-white/25';
+          icon.innerHTML =
+            '<svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>';
+          const label = document.createElement('span');
+          label.textContent = `${String(p.name).slice(0, 60)}${p.minutes ? ` · ${Number(p.minutes)} min` : ''}`;
+          el.append(icon, label);
           new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([p.lng, p.lat]).addTo(map);
           poiEls.push(el);
         }
