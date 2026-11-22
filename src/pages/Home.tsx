@@ -1,14 +1,13 @@
 import { ArrowDown, Building2, Compass, Home as HomeIcon, Map, MousePointerClick, Ruler, ShieldCheck, Smartphone } from 'lucide-react';
 import { motion } from 'motion/react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LeadForm } from '../components/LeadForm';
 import { ProjectCard } from '../components/ProjectCard';
 import { BrandMark, SectionTitle, WhatsAppIcon } from '../components/ui';
 import { SITE } from '../config';
-import { loadProjects, useAsync } from '../lib/data';
+import { asset, loadProjects, useAsync } from '../lib/data';
+import { HERO_BLUR } from '../heroBlur';
 import { cx, num, whatsappUrl } from '../lib/format';
-
-const HeroMap = lazy(() => import('../components/HeroMap'));
 
 export function Home() {
   const { data: projects = [], loading } = useAsync(loadProjects, []);
@@ -23,11 +22,25 @@ export function Home() {
 
       {/* HERO */}
       <section className="bg-brand-950 relative isolate flex min-h-[100svh] items-end overflow-hidden pt-32 pb-16 sm:items-center sm:pb-24">
-        <div className="absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_top_right,#065f46_0%,#022c22_60%)]" />
-        <div className="absolute inset-0 -z-10">
-          <Suspense fallback={null}>{projects.length > 0 && <HeroMap projects={projects} />}</Suspense>
-          <div className="from-brand-950 via-brand-950/25 to-brand-950/10 absolute inset-0 bg-gradient-to-t" />
-          <div className="from-brand-950/95 via-brand-950/45 absolute inset-0 bg-gradient-to-r to-transparent" />
+        {/* Fondo: foto aérea con vista previa borrosa y un acercamiento lento */}
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <img src={HERO_BLUR} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl" />
+          <motion.img
+            src={asset('img/hero.webp')}
+            srcSet={`${asset('img/hero-sm.webp')} 1000w, ${asset('img/hero.webp')} 1600w`}
+            sizes="100vw"
+            alt="Vista aérea de San Bernardo del Viento y el mar Caribe"
+            fetchPriority="high"
+            decoding="async"
+            initial={{ scale: 1.12, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ scale: { duration: 14, ease: 'easeOut' }, opacity: { duration: 1.2 } }}
+            className="absolute inset-0 h-full w-full object-cover object-[center_60%]"
+          />
+          {/* Capas suaves: el cielo y el mar se ven; el texto sigue legible */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
+          <div className="from-brand-950 via-brand-950/20 absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t to-transparent" />
+          <div className="from-brand-950/85 via-brand-950/40 max-sm:via-brand-950/60 max-sm:to-brand-950/30 absolute inset-0 bg-gradient-to-r via-45% to-transparent to-75%" />
         </div>
 
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -44,7 +57,7 @@ export function Home() {
               </span>
               Disponibilidad actualizada en tiempo real
             </span>
-            <h1 className="mt-6 text-[2.6rem] leading-[1.05] font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl">
+            <h1 className="mt-6 text-[2.6rem] leading-[1.05] font-extrabold tracking-tight text-white [text-shadow:0_2px_24px_rgb(2_44_34/0.45)] sm:text-6xl lg:text-7xl">
               Tu lote ideal, <br className="hidden sm:block" />
               <span className="text-gradient">visto desde el cielo.</span>
             </h1>

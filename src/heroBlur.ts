@@ -1,0 +1,2 @@
+// Vista previa borrosa de public/img/hero.webp (generada)
+export const HERO_BLUR = 'data:image/webp;base64,UklGRsQAAABXRUJQVlA4ILgAAABwBQCdASoYABIAPu1qrVCppaQiqAqpMB2JQBTpsZAPEqAVwag75QByXknSLgVAoL/nVJcAAP6RKizBYhidqSs2t9nw8toziwaVcJ82e/bhGo/wpzIX6gFfe5C5+tB6nWEuqXPRib8mIZBVGd0GXlgZbnBFgqYltDWUapK3G1FvCk0YvOXAAPFlGxHO/6p8PXCRsQXFUdZCKEqp9KLpLBMoCQpm1ICokhKMpBgB1hBJawHhorPkAAAA';
