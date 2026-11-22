@@ -1,0 +1,1236 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    --sai-dark-blue: #1a2b;
+    --sai-blue: #2c3e5f;
+    --sai-purple: #16a34a;
+    --sai-light-purple: #4ade80;
+    --sai-orange: #22c55e;
+    --sai-light-orange: #86efac;
+    --sai-white: #ffffff;
+    --sai-light-gray: #f8f9fa;
+    --sai-gray: #e9ecef;
+    --sai-border: #dee2e6;
+    --sai-text: #2c3e50;
+    --sai-text-light: #6c757d;
+    --shadow-sm: 0 2px 4px rgba(26, 43, 74, 0.08);
+    --shadow-md: 0 4px 12px rgba(26, 43, 74, 0.12);
+    --shadow-lg: 0 8px 24px rgba(26, 43, 74, 0.16);
+    --available-color: #10b981;
+    --reserved-color: #f59e0b;
+    --sold-color: #ef4444;
+}
+
+body {
+    overflow: hidden;
+    background: var(--sai-light-gray);
+    touch-action: pan-y;
+}
+
+/* LAYOUT MÓVIL */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* HEADER MÓVIL COMPACTO */
+header {
+    background: linear-gradient(135deg, var(--sai-dark-blue) 0%, var(--sai-blue) 100%);
+    box-shadow: var(--shadow-md);
+    padding: 12px 16px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+}
+
+header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--sai-purple) 0%, var(--sai-orange) 100%);
+}
+
+.logo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sai-white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.logo img {
+    height: 58px;
+    width: auto;
+    flex-shrink: 0;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    overflow: hidden;
+}
+
+.logo-main {
+    font-size: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.logo-sub {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--sai-light-orange);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* BOTÓN MENÚ HAMBURGUESA */
+.menu-toggle {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    cursor: pointer;
+    color: white;
+    font-size: 18px;
+    backdrop-filter: blur(10px);
+    position: relative;
+}
+
+.menu-toggle.active {
+    background: var(--sai-orange);
+}
+
+/* SELECTOR DE VISTAS MÓVIL */
+.view-toggle {
+    display: flex;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    overflow: hidden;
+    padding: 3px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.view-button {
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    white-space: nowrap;
+}
+
+.view-button.active {
+    background: linear-gradient(135deg, var(--sai-orange) 0%, var(--sai-light-orange) 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 140, 66, 0.4);
+}
+
+/* MAPA PRINCIPAL */
+main {
+    flex: 1;
+    position: relative;
+    margin-top: 56px;
+    overflow: hidden;
+    background: white;
+}
+
+#map-viewer {
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+}
+
+/* COORDENADAS FLOTANTES */
+.coordinates {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--sai-dark-blue) 0%, var(--sai-blue) 100%);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 900;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* LEYENDA COMPACTA */
+.legend {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: white;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    z-index: 900;
+    min-width: 130px;
+}
+
+.legend-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--sai-dark-blue);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: var(--sai-text);
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 2px solid white;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
+.legend-color.available {
+    background: var(--available-color);
+}
+
+.legend-color.reserved {
+    background: var(--reserved-color);
+}
+
+.legend-color.sold {
+    background: var(--sold-color);
+}
+
+.legend-coordinates {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+}
+
+.legend-coordinates a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--sai-text);
+    text-decoration: none;
+}
+
+.legend-coordinates a:hover {
+    color: var(--sai-dark-blue);
+    text-decoration: underline;
+}
+
+/* CONTROLES DEL MAPA FLOTANTES */
+.map-tools {
+    position: absolute;
+    top: 90px;
+    right: 10px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+
+.tool-button {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid var(--sai-border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--sai-text);
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.tool-button:active {
+    transform: scale(0.95);
+}
+
+.tool-button.active {
+    background: linear-gradient(135deg, var(--sai-purple) 0%, var(--sai-light-purple) 100%);
+    color: white;
+    border-color: transparent;
+}
+
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+}
+
+/* Tooltip para áreas especiales */
+.area-tooltip {
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: none !important;
+    border-radius: 4px !important;
+    color: white !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 4px 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Deshabilitar interacción con áreas verdes y viales */
+.leaflet-interactive[style*="fill: rgb(76, 175, 80)"],
+.leaflet-interactive[style*="fill: rgb(120, 144, 156)"] {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+
+/* Clase para áreas no interactivas */
+.non-interactive-area {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+/* Asegurar que los paths dentro tampoco sean interactivos */
+.non-interactive-area path {
+    pointer-events: none !important;
+}
+
+
+/* SELECTOR DE UBICACIÓN */
+.location-marker {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    margin-left: -20px;
+    margin-top: -40px;
+    z-index: 1000;
+    pointer-events: none;
+    animation: markerBounce 0.5s ease-out;
+}
+
+@keyframes markerBounce {
+    0% {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translateY(10px);
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.location-marker i {
+    font-size: 40px;
+    color: #FF4444;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* RUTA DE NAVEGACIÓN */
+.route-line {
+    stroke: #4285F4;
+    stroke-width: 4;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: dashAnimation 1s linear infinite;
+}
+
+@keyframes dashAnimation {
+    to {
+        stroke-dashoffset: -20;
+    }
+}
+
+/* PANEL DE INFORMACIÓN DE RUTA */
+.route-info-panel {
+    position: absolute;
+    top: 70px;
+    /* CAMBIADO: Ahora está arriba, debajo de la leyenda */
+    right: 12px;
+    /* CAMBIADO: A la derecha */
+    left: auto;
+    /* CAMBIADO: Quitamos centrado */
+    transform: none;
+    /* CAMBIADO: Sin transformación */
+    background: white;
+    padding: 8px 12px;
+    /* MÁS COMPACTO */
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    z-index: 950;
+    width: 140px;
+    /* ANCHO FIJO PEQUEÑO */
+    display: none;
+    border: 2px solid var(--sai-purple);
+}
+
+.route-info-panel.active {
+    display: block;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.route-info-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--sai-dark-blue);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--sai-purple);
+}
+
+.route-info-title i {
+    color: var(--sai-purple);
+    font-size: 12px;
+}
+
+.route-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: var(--sai-text);
+}
+
+.route-info-item i {
+    color: var(--sai-orange);
+    font-size: 12px;
+}
+
+.route-info-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--sai-text-light);
+    cursor: pointer;
+    font-size: 14px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.route-info-close:active {
+    background: var(--sai-light-gray);
+}
+
+/* SIDEBAR MÓVIL (DRAWER) */
+aside {
+    position: fixed;
+    top: 56px;
+    right: -100%;
+    width: 100%;
+    max-width: 380px;
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+    background: white;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    z-index: 1100;
+    transition: right 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+aside.open {
+    right: 0;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0 20px 0;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--sai-purple);
+    border-radius: 10px;
+}
+
+/* PANELES */
+.panel {
+    padding: 16px;
+    border-bottom: 2px solid var(--sai-gray);
+}
+
+.panel:last-child {
+    border-bottom: none;
+}
+
+.panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--sai-dark-blue);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 8px 0;
+    z-index: 10;
+}
+
+.panel-title i {
+    color: var(--sai-orange);
+    font-size: 16px;
+}
+
+/* DATOS DEL LOTE */
+.lot-data-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    margin-bottom: 12px;
+    border: 1px solid var(--sai-border);
+}
+
+.lot-data-header {
+    background: linear-gradient(135deg, var(--sai-purple) 0%, var(--sai-light-purple) 100%);
+    color: white;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.lot-data-header i {
+    font-size: 16px;
+}
+
+.lot-data-content {
+    padding: 12px;
+}
+
+.lot-data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.lot-data-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    background: var(--sai-light-gray);
+    border-radius: 8px;
+    border-left: 3px solid var(--sai-orange);
+}
+
+.lot-data-label {
+    font-size: 9px;
+    color: var(--sai-text-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.lot-data-value {
+    font-size: 13px;
+    color: var(--sai-text);
+    font-weight: 700;
+}
+
+.lot-plan-container {
+    position: relative;
+    height: 200px;
+    border: 2px solid var(--sai-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+}
+
+#lot-plan-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.north-arrow {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--sai-text);
+    background: white;
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--sai-border);
+}
+
+.north-arrow i {
+    font-size: 16px;
+    color: var(--sai-orange);
+}
+
+
+.notification {
+    position: fixed;
+    top: 90px;
+    right: 25px;
+    background: white;
+    padding: 18px 24px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border: 2px solid var(--sai-border);
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    border-left: 5px solid #10b981;
+}
+
+.notification.error {
+    border-left: 5px solid #ef4444;
+}
+
+.notification.info {
+    border-left: 5px solid var(--sai-purple);
+}
+
+.notification-icon {
+    font-size: 22px;
+}
+
+.notification.success .notification-icon {
+    color: #10b981;
+}
+
+.notification.error .notification-icon {
+    color: #ef4444;
+}
+
+.notification.info .notification-icon {
+    color: var(--sai-purple);
+}
+
+.notification-message {
+    flex-grow: 1;
+    color: var(--sai-text);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: var(--sai-text-light);
+    cursor: pointer;
+    font-size: 18px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.notification-close:hover {
+    background: var(--sai-light-gray);
+    color: var(--sai-text);
+}
+
+
+/* BOTONES DE CONTROL */
+.control-button {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.3px;
+    touch-action: manipulation;
+}
+
+.control-button:active {
+    transform: scale(0.97);
+}
+
+.control-button i {
+    font-size: 14px;
+}
+
+.control-button.primary {
+    background: linear-gradient(135deg, var(--sai-purple) 0%, var(--sai-light-purple) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(123, 104, 238, 0.3);
+}
+
+.control-button.secondary {
+    background: var(--sai-light-gray);
+    color: var(--sai-text);
+    border: 2px solid var(--sai-border);
+}
+
+.control-button.success {
+    background: linear-gradient(135deg, var(--available-color) 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.control-button.tertiary {
+    background: linear-gradient(135deg, var(--sai-orange) 0%, var(--sai-light-orange) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+}
+
+/* DATA ITEMS */
+.data-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--sai-gray);
+}
+
+.data-item:last-child {
+    border-bottom: none;
+}
+
+.data-label {
+    font-size: 11px;
+    color: var(--sai-text-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.data-value {
+    font-size: 13px;
+    color: var(--sai-text);
+    font-weight: 700;
+}
+
+/* EMPTY STATES */
+.empty-lote-data {
+    text-align: center;
+    color: var(--sai-text-light);
+    font-style: italic;
+    padding: 30px 16px;
+    font-size: 12px;
+}
+
+.empty-lote-data i {
+    font-size: 40px;
+    background: linear-gradient(135deg, var(--sai-purple) 0%, var(--sai-light-purple) 100%);
+    --webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* MODALES MÓVILES */
+.dxf-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(26, 43, 74, 0.85);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+}
+
+.dxf-modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-height: 85vh;
+    padding: 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: modalSlideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes modalSlideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--sai-dark-blue) 0%, var(--sai-blue) 100%);
+    border-bottom: 3px solid var(--sai-orange);
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 0.3px;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:active {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+}
+
+.file-upload-area {
+    border: 3px dashed var(--sai-purple);
+    border-radius: 14px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, rgba(123, 104, 238, 0.05) 0%, rgba(157, 141, 247, 0.05) 100%);
+}
+
+.file-upload-area:active {
+    background: linear-gradient(135deg, rgba(123, 104, 238, 0.1) 0%, rgba(157, 141, 247, 0.1) 100%);
+}
+
+.upload-icon {
+    font-size: 40px;
+    background: linear-gradient(135deg, var(--sai-purple) 0%, var(--sai-light-purple) 100%);
+    --webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+}
+
+.upload-text {
+    font-size: 14px;
+    color: var(--sai-text);
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.upload-hint {
+    font-size: 11px;
+    color: var(--sai-text-light);
+}
+
+.coordinate-inputs {
+    margin-top: 16px;
+}
+
+.input-group {
+    margin-bottom: 12px;
+}
+
+.input-label {
+    display: block;
+    font-size: 11px;
+    color: var(--sai-text);
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.coordinate-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--sai-border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.coordinate-input:focus {
+    outline: none;
+    border-color: var(--sai-purple);
+    box-shadow: 0 0 0 3px rgba(123, 104, 238, 0.1);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--sai-border);
+}
+
+.modal-button {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+    touch-action: manipulation;
+}
+
+.modal-button:active {
+    transform: scale(0.97);
+}
+
+.modal-button.primary {
+    background: linear-gradient(135deg, var(--sai-orange) 0%, var(--sai-light-orange) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+}
+
+.modal-button.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.modal-button.secondary {
+    background: var(--sai-light-gray);
+    color: var(--sai-text);
+    border: 2px solid var(--sai-border);
+}
+
+#file-input,
+#excel-file-input {
+    display: none;
+}
+
+/* LOADING */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(26, 43, 74, 0.9) 0%, rgba(44, 62, 95, 0.9) 100%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.2);
+    border-top: 5px solid var(--sai-orange);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 16px;
+    font-size: 14px;
+    color: white;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* OCULTAR ELEMENTOS NO NECESARIOS EN MÓVIL */
+.sidebar-shadow,
+.scroll-indicator {
+    display: none;
+}
+
+/* LANDSCAPE MODE */
+@media (orientation: landscape) and (max-height: 500px) {
+    header {
+        height: 48px;
+        padding: 8px 12px;
+    }
+
+    .logo img {
+        height: 24px;
+    }
+
+    .logo-main {
+        font-size: 12px;
+    }
+
+    .logo-sub {
+        display: none;
+    }
+
+    main {
+        margin-top: 48px;
+    }
+
+    aside {
+        top: 48px;
+        height: calc(100vh - 48px);
+    }
+
+    .coordinates {
+        bottom: 8px;
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    .legend {
+        top: 8px;
+        left: 8px;
+        padding: 6px;
+    }
+
+    .map-tools {
+        top: 8px;
+        right: 8px;
+    }
+
+    .tool-button {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+}
+
+/* EXTRA PEQUEÑO */
+@media (max-width: 360px) {
+    .logo-main {
+        font-size: 12px;
+    }
+
+    .logo-sub {
+        font-size: 8px;
+    }
+
+    .view-button {
+        padding: 5px 8px;
+        font-size: 9px;
+    }
+
+    .panel-title {
+        font-size: 12px;
+    }
+
+    .control-button {
+        font-size: 12px;
+        padding: 10px 14px;
+    }
+
+    .data-label {
+        font-size: 10px;
+    }
+
+    .data-value {
+        font-size: 12px;
+    }
+}
+
+/* TABLETS EN PORTRAIT */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    aside {
+        max-width: 420px;
+    }
+
+    .panel {
+        padding: 20px;
+    }
+
+    .lot-plan-container {
+        height: 250px;
+    }
+
+    .control-button {
+        padding: 14px 18px;
+        font-size: 14px;
+    }
+}
+
+/* ACCESIBILIDAD TÁCTIL */
+.touchable {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* PREVENIR ZOOM EN INPUTS */
+input[type="text"],
+input[type="number"],
+select {
+    font-size: 16px !important;
+}
+
+/* SMOOTH SCROLLING */
+* {
+    -webkit-overflow-scrolling: touch;
+}

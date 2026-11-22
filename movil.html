@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a2b4a">
+    <title>Gestor de Lotes - Móvil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/stylemovil.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="/img/logo.png" alt="Rivera del Viento">
+                <div class="logo-text">
+                    <span class="logo-main"></span>
+                    <span class="logo-sub"></span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="view-toggle">
+                    <button class="view-button" data-view="map">Mapa</button>
+                    <button class="view-button active" data-view="satellite">Satélite</button>
+                </div>
+                <button class="menu-toggle touchable" id="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div id="map-viewer"></div>
+            <!-- Coordenadas flotantes -->
+            <div class="coordinates">Lat: 0.0000, Lng: 0.0000</div>
+
+
+
+            <!-- Leyenda -->
+            <div class="legend">
+                <div class="legend-title">ESTADOS</div>
+                <div class="legend-item">
+                    <div class="legend-color available"></div>
+                    <span>Disponible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color reserved"></div>
+                    <span>Reservado</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color sold"></div>
+                    <span>Vendido</span>
+                </div>
+                <div class="legend-coordinates">
+                    <a href="https://maps.app.goo.gl/4hJC2gok45VbmeHG7" target="_blank" rel="noopener">
+                        Coordenadas Proyecto: <br>
+                        9.360091, -76.003014
+                    </a>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Overlay para cerrar sidebar -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <aside id="sidebar">
+            <div class="sidebar-content" id="sidebar-content">
+                <!-- Panel de Datos de Lote -->
+                <div class="panel">
+                    <div class="lot-data-panel" id="lot-data-panel">
+                        <div class="lot-data-header">
+                            <i class="fas fa-chart-area"></i> DATOS DE LOTE
+                        </div>
+                        <div class="lot-data-content">
+                            <div id="lot-data-content">
+                                <div class="empty-lote-data">
+                                    <i class="fas fa-mouse-pointer"></i>
+                                    Selecciona un lote para ver sus datos
+                                </div>
+                            </div>
+                            <div class="lot-plan-container">
+                                <canvas id="lot-plan-canvas"></canvas>
+                                <div class="north-arrow">
+                                    <i class="fas fa-location-arrow"></i>
+                                    <span>N</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <div class="panel">
+                    <div class="panel-title">
+                        <i class="fas fa-chart-pie"></i> Información Adicional
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Total Manzanas:</span>
+                        <span class="data-value" id="total-manzanos">0</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Total Lotes:</span>
+                        <span class="data-value" id="total-lotes">0</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Disponibles:</span>
+                        <span class="data-value" id="available-lotes" style="color: var(--available-color);">0</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Reservados:</span>
+                        <span class="data-value" id="reserved-lotes" style="color: var(--reserved-color);">0</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Vendidos:</span>
+                        <span class="data-value" id="sold-lotes" style="color: var(--sold-color);">0</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Área Total:</span>
+                        <span class="data-value" id="total-area">0.00 ha</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Estado:</span>
+                        <span class="data-value" style="color: #10b981;">● Activo</span>
+                    </div>
+                </div>
+
+
+
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal DXF -->
+    <div class="dxf-modal hidden" id="dxf-modal">
+        <div class="modal-content">
+            <div class="modal-body">
+                <input type="file" id="file-input" accept=".dxf" />
+                <div class="coordinate-inputs">
+                    <div class="input-group">
+                        <label class="input-label">Sistema de coordenadas</label>
+                        <select class="coordinate-input" id="coord-system">
+                            <option value="utm">UTM (Universal Transverse Mercator)</option>
+                            <option value="latlong">Lat/Lng (Geográficas)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="utm-zone-group">
+                        <label class="input-label">Zona UTM</label>
+                        <input type="text" class="coordinate-input" id="utm-zone"
+                            placeholder="Ej: 20 (para Bolivia: 19, 20 o 21)">
+                    </div>
+                    <div class="input-group" id="utm-hemisphere-group">
+                        <label class="input-label">Hemisferio</label>
+                        <select class="coordinate-input" id="utm-hemisphere">
+                            <option value="south">Sur</option>
+                            <option value="north">Norte</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="ref-lat-group" style="display:none;">
+                        <label class="input-label">Punto de referencia</label>
+                        <input type="text" class="coordinate-input" id="ref-lat" placeholder="Latitud (ej: -21.5355)">
+                    </div>
+                    <div class="input-group" id="ref-lng-group" style="display:none;">
+                        <input type="text" class="coordinate-input" id="ref-lng" placeholder="Longitud (ej: -63.6714)">
+                    </div>
+                    <div class="input-group" id="scale-group" style="display:none;">
+                        <label class="input-label">Escala</label>
+                        <input type="number" class="coordinate-input" id="scale-input" placeholder="1.0" value="1.0"
+                            step="0.0001">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Excel -->
+    <div class="dxf-modal hidden" id="excel-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Importar archivo Excel</span>
+                <button class="modal-close" id="excel-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="file-upload-area" id="excel-upload-area">
+                    <div class="upload-icon"><i class="fas fa-file-excel"></i></div>
+                    <div class="upload-text">Arrastra tu archivo Excel aquí</div>
+                    <div class="upload-hint">o haz clic para seleccionar (formatos: .xlsx, .xls)</div>
+                </div>
+                <input type="file" id="excel-file-input" accept=".xlsx,.xls" />
+                <div class="coordinate-inputs">
+                    <div class="input-group">
+                        <label class="input-label">Fila de encabezados</label>
+                        <input type="number" class="coordinate-input" id="header-row" value="1" min="1">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Columna de Código de Lote</label>
+                        <input type="text" class="coordinate-input" id="lote-code-column" value="A" placeholder="Ej: A">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Columna de Precio</label>
+                        <input type="text" class="coordinate-input" id="price-column" value="D" placeholder="Ej: D">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Columna de Estado</label>
+                        <input type="text" class="coordinate-input" id="status-column" value="E" placeholder="Ej: E">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Procesando archivo...</div>
+    </div>
+
+
+    <div class="notification" id="notification">
+        <div class="notification-icon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="notification-message"></div>
+        <button class="notification-close" id="notification-close">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+      
+    <script src="/js/main2.js"></script>
+</body>
+
+</html>
+
