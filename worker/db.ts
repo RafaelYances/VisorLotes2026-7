@@ -102,6 +102,14 @@ const SCHEMA = [
   // Accesos y sesiones que pertenecían a cuentas de la versión anterior
   `DELETE FROM owner_projects WHERE owner_id NOT IN (SELECT id FROM owner_accounts)`,
   `DELETE FROM owner_sessions WHERE owner_id NOT IN (SELECT id FROM owner_accounts)`,
+  `CREATE TABLE IF NOT EXISTS stats_seen (
+     day TEXT NOT NULL,
+     project TEXT NOT NULL,
+     visitor TEXT NOT NULL,
+     event TEXT NOT NULL,
+     lot TEXT NOT NULL DEFAULT '',
+     PRIMARY KEY (project, day, visitor, event, lot)
+   ) WITHOUT ROWID`,
   `CREATE TABLE IF NOT EXISTS audit (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      ts INTEGER NOT NULL,

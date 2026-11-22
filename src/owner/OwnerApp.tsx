@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { ApiError } from '../admin/api';
 import { AuthShell, Field, SubmitButton } from '../admin/AuthScreens';
 import { FullLoader } from '../components/Loader';
+import { StatsView } from '../components/StatsView';
 import { BrandMark, StatusDot } from '../components/ui';
 import { STATUS } from '../config';
 import { cx, m2 } from '../lib/format';
@@ -87,6 +88,8 @@ function OwnerDashboard({ name, onLogout }: { name?: string; onLogout: () => voi
   const [slug, setSlug] = useState('');
   const [project, setProject] = useState<Project | null>(null);
   const [filter, setFilter] = useState<LotStatus | 'all'>('all');
+  const [view, setView] = useState<'lots' | 'stats'>('lots');
+  const statsLoader = useCallback((days: number) => ownerApi.stats(slug, days), [slug]);
   const [q, setQ] = useState('');
   const [focus, setFocus] = useState<string | null>(null);
   const [busyLot, setBusyLot] = useState<string | null>(null);
@@ -209,13 +212,42 @@ function OwnerDashboard({ name, onLogout }: { name?: string; onLogout: () => voi
           ) : (
             <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-slate-900">{project?.name ?? projects[0]?.name ?? ''}</h1>
           )}
+          <div className="flex shrink-0 gap-1 rounded-xl bg-slate-100 p-1">
+            {(
+              [
+                ['lots', 'Lotes'],
+                ['stats', 'Estadísticas'],
+              ] as const
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                onClick={() => setView(k)}
+                className={cx(
+                  'rounded-lg px-3 py-1.5 text-xs font-bold transition',
+                  view === k ? 'bg-white text-slate-900 shadow' : 'text-slate-500',
+                )}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="mt-1 text-xs text-slate-500">
-          Toca el estado de un lote para cambiarlo. Se guarda al instante y se ve de inmediato en el sitio.
-        </p>
+        {view === 'lots' && (
+          <p className="mt-1 text-xs text-slate-500">
+            Toca el estado de un lote para cambiarlo. Se guarda al instante y se ve de inmediato en el sitio.
+          </p>
+        )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      {view === 'stats' && project && (
+        <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
+          <div className="mx-auto max-w-2xl p-4">
+            <StatsView key={project.slug} projectName={project.name} lots={project.lots} load={statsLoader} audience="owner" />
+          </div>
+        </div>
+      )}
+
+      <div className={cx('min-h-0 flex-1 flex-col lg:flex-row', view === 'lots' ? 'flex' : 'hidden')}>
         <div className="relative h-[34vh] shrink-0 lg:h-auto lg:flex-1">
           {project ? (
             <MapView

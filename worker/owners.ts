@@ -12,6 +12,7 @@ import { b64, hashPassword, randomBytes, randomToken, sha256, unb64, verifyPassw
 import { audit } from './db';
 import { body, fail, json, sameOrigin } from './http';
 import { loadDetail } from './projects';
+import { parseDays, projectStats } from './stats';
 
 const COOKIE = '__Host-vl_owner';
 const SESSION_HOURS = 12;
@@ -176,6 +177,12 @@ export async function ownerApi(env: Env, req: Request, path: string): Promise<Re
     const o = new Map(results.map((r) => [r.lot, r.status]));
     const lots = ((d.lots as Record<string, unknown>[]) ?? []).map((l) => ({ ...l, status: o.get(l.id as string) ?? l.status }));
     return json({ ...d, lots, gallery: [], description: '' });
+  }
+
+  if (path === '/api/owner/stats' && req.method === 'GET') {
+    const project = new URL(req.url).searchParams.get('project') || '';
+    if (!mine.includes(project)) return fail(404, 'Proyecto no encontrado');
+    return json(await projectStats(db, project, parseDays(req)));
   }
 
   if (path === '/api/owner/lots' && req.method === 'POST') {

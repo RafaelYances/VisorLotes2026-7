@@ -92,6 +92,7 @@ export const adminApi = {
   changePassword: (current: string, code: string, next: string) => call<{ ok: true }>('password', { current, code, next }),
   saveLots: (project: string, changes: LotChange[]) => call<{ ok: true; updated: number }>('lots', { project, changes }),
   audit: () => call<{ items: AuditItem[] }>('audit'),
+  stats: (project: string, days: number) => call<unknown>(`stats?project=${encodeURIComponent(project)}&days=${days}`),
   gallery: (project: string) => call<{ items: GalleryItem[] }>(`gallery?project=${encodeURIComponent(project)}`),
   galleryUpdate: (project: string, changes: { order?: string[]; items?: { id: string; caption?: string; cover?: boolean }[] }) =>
     call<{ ok: true; items: GalleryItem[] }>('gallery/update', { project, ...changes }),

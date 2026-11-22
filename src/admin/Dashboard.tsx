@@ -1,4 +1,19 @@
-import { Building2, CheckSquare, Inbox, ExternalLink, History, Images, Loader2, LogOut, Plus, Search, Square, Tag, X } from 'lucide-react';
+import {
+  BarChart3,
+  Building2,
+  CheckSquare,
+  Inbox,
+  ExternalLink,
+  History,
+  Images,
+  Loader2,
+  LogOut,
+  Plus,
+  Search,
+  Square,
+  Tag,
+  X,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -8,6 +23,7 @@ import { applyOverrides, loadOverrides } from '../lib/data';
 import { cx, m2, num, price } from '../lib/format';
 import type { LotStatus, Project } from '../types';
 import { MapView, type MapHandle } from '../viewer/MapView';
+import { StatsView, type StatsReport } from '../components/StatsView';
 import { adminApi, ApiError, type AdminProjectCard, type AuditItem, type LotChange } from './api';
 import { LeadsView } from './LeadsView';
 import { NewProjectWizard, ProjectEditor } from './ProjectAdmin';
@@ -40,7 +56,8 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<LotStatus | 'all'>('all');
   const [q, setQ] = useState('');
-  const [tab, setTab] = useState<'lots' | 'gallery' | 'project' | 'audit'>('lots');
+  const [tab, setTab] = useState<'lots' | 'gallery' | 'project' | 'stats' | 'audit'>('lots');
+  const statsLoader = useCallback((days: number) => adminApi.stats(slug, days) as Promise<StatsReport>, [slug]);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const mapRef = useRef<MapHandle>(null);
@@ -240,11 +257,12 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
 
           {/* Panel lateral */}
           <aside className="flex min-h-0 flex-1 flex-col border-l border-slate-200 bg-white md:w-[460px] md:flex-none">
-            <div className="flex shrink-0 gap-5 border-b border-slate-100 px-4">
+            <div className="flex shrink-0 scrollbar-thin gap-4 overflow-x-auto border-b border-slate-100 px-4 whitespace-nowrap">
               {(
                 [
                   ['lots', 'Lotes', Tag],
                   ['gallery', 'Galería', Images],
+                  ['stats', 'Estadísticas', BarChart3],
                   ['project', 'Proyecto', Building2],
                   ['audit', 'Actividad', History],
                 ] as const
@@ -253,11 +271,11 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
                   key={k}
                   onClick={() => setTab(k)}
                   className={cx(
-                    'relative flex items-center gap-2 py-3 text-sm font-bold',
+                    'relative flex items-center gap-1.5 py-3 text-sm font-bold',
                     tab === k ? 'text-brand-700' : 'text-slate-500 hover:text-slate-800',
                   )}
                 >
-                  <I className="size-4" /> {label}
+                  <I className="hidden size-4 2xl:block" /> {label}
                   {tab === k && <span className="bg-brand-600 absolute inset-x-0 -bottom-px h-0.5 rounded-full" />}
                 </button>
               ))}
@@ -265,6 +283,12 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
 
             {tab === 'audit' ? (
               <AuditList onError={handleError} onLogoutAll={() => logout(true)} />
+            ) : tab === 'stats' ? (
+              project ? (
+                <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto bg-slate-50 p-4">
+                  <StatsView key={project.slug} projectName={project.name} lots={project.lots} load={statsLoader} audience="admin" />
+                </div>
+              ) : null
             ) : tab === 'project' ? (
               slug ? (
                 <ProjectEditor

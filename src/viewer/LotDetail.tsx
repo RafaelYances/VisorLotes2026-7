@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { StatusBadge, WhatsAppIcon } from '../components/ui';
 import { cx, m, m2, price, whatsappUrl } from '../lib/format';
+import { track } from '../lib/track';
 import { HOUSES } from '../lib/houses';
 import type { Lot, Project } from '../types';
 import { HouseDesigner } from './HouseDesigner';
@@ -35,6 +36,7 @@ export function LotDetail(p: Props) {
     `\n${location.href}`;
 
   async function share() {
+    track(project.slug, 'share', lot.id);
     const url = location.href;
     const data = { title: `${project.name} · Lote ${lot.numero} Mz ${lot.manzana}`, text: `Mira este lote de ${m2(lot.area)}`, url };
     try {
@@ -191,6 +193,7 @@ export function LotDetail(p: Props) {
         <div className="flex gap-2">
           <a
             href={whatsappUrl(project.contact.whatsapp, msg)}
+            onClick={() => track(project.slug, 'wa', lot.id)}
             target="_blank"
             rel="noopener"
             className={cx(

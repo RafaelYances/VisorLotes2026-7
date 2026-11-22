@@ -9,6 +9,7 @@ import { STATUS } from '../config';
 import { loadProject, useAsync } from '../lib/data';
 import { cx } from '../lib/format';
 import { lotBearing, rectToRing } from '../lib/geo';
+import { track } from '../lib/track';
 import { fitHouse, HOUSES, ROOM_STYLE } from '../lib/houses';
 import type { BaseLayer } from '../lib/mapStyle';
 import type { LotStatus, Project } from '../types';
@@ -70,6 +71,15 @@ function Viewer({ project }: { project: Project }) {
   const houseId = params.get('casa');
   const tab = (params.get('tab') as 'info' | 'casa') || (houseId ? 'casa' : 'info');
   const selected = project.lots.find((l) => l.id === selectedId) ?? null;
+
+  // Estadísticas anónimas: visita, lote consultado y diseño de casa probado
+  useEffect(() => track(project.slug, 'view'), [project.slug]);
+  useEffect(() => {
+    if (selectedId && project.lots.some((l) => l.id === selectedId)) track(project.slug, 'lot', selectedId);
+  }, [project, selectedId]);
+  useEffect(() => {
+    if (houseId && selectedId) track(project.slug, 'casa', selectedId);
+  }, [project.slug, houseId, selectedId]);
 
   const [base, setBase] = useState<BaseLayer>('satellite');
   const [statusFilter, setStatusFilter] = useState<Set<LotStatus>>(new Set(['available', 'reserved', 'sold']));

@@ -6,6 +6,7 @@ import { HighlightIcon, StatusDot, WhatsAppIcon } from '../components/ui';
 import { STATUS } from '../config';
 import { asset } from '../lib/data';
 import { cx, ha, m2, num, whatsappUrl } from '../lib/format';
+import { track } from '../lib/track';
 import type { Lot, LotStatus, Project } from '../types';
 
 interface Props {
@@ -183,6 +184,7 @@ export function ProjectOverview({ project, visible, favorites, onSelect, onPoi }
       <div className="shrink-0 border-t border-slate-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <a
           href={whatsappUrl(project.contact.whatsapp, `Hola, quiero información sobre los lotes de ${project.name}.`)}
+          onClick={() => track(project.slug, 'wa')}
           target="_blank"
           rel="noopener"
           className="bg-brand-600 shadow-glow hover:bg-brand-700 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl font-bold text-white transition active:scale-[0.98]"

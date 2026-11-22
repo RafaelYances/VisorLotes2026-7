@@ -1,4 +1,5 @@
 import { ApiError } from '../admin/api';
+import type { StatsReport } from '../components/StatsView';
 import { asset } from '../lib/data';
 import type { LotStatus, Project } from '../types';
 
@@ -21,5 +22,6 @@ export const ownerApi = {
   logout: () => call<{ ok: true }>('logout', {}),
   projects: () => call<{ projects: { slug: string; name: string }[] }>('projects'),
   project: (slug: string) => call<Project>(`project/${slug}`),
+  stats: (project: string, days: number) => call<StatsReport>(`stats?project=${encodeURIComponent(project)}&days=${days}`),
   setStatus: (project: string, changes: { lot: string; status: LotStatus }[]) => call<{ ok: true }>('lots', { project, changes }),
 };

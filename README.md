@@ -126,6 +126,15 @@ Para que el dueño de cada proyecto actualice **solo el estado de sus lotes** (d
 4. Si olvida sus datos: **Ver** muestra la contraseña actual. **Generar contraseña nueva** invalida la anterior y cierra su sesión. **Quitar acceso** lo saca de inmediato.
 5. Un mismo usuario puede tener varios proyectos ("Dar acceso a un usuario existente").
 
+## Estadísticas
+
+Pestaña **Estadísticas** en el panel y en el portal del dueño (últimos 7, 30 o 90 días):
+- Visitantes, contactos por WhatsApp (con % de conversión), lotes consultados y diseños de casa probados; comparación con el periodo anterior.
+- Gráfico de visitantes por día (con tabla) y los 10 lotes más consultados.
+- En el panel: **Copiar resumen para enviar al dueño** (texto listo para WhatsApp).
+
+Funcionamiento: el sitio registra eventos anónimos (`/api/public/track`): un identificador aleatorio guardado en el navegador, sin IP ni datos personales. Cada persona cuenta una vez por día y por lote. No se cuentan robots ni las visitas del administrador o de los dueños. Tabla D1 `stats_seen`, se conservan 400 días.
+
 ## Formulario "Publica tu proyecto"
 
 Cada solicitud se **guarda en el servidor** (D1, tabla `leads`) y aparece en el panel → botón **Solicitudes** (con contador de nuevas). Desde ahí: escribirle por WhatsApp con un saludo listo, copiar sus datos, agregar notas internas y marcarla como *contactada* o *archivada*. Quien llena el formulario ve "¡Solicitud recibida!" solo si quedó guardada, y tiene la opción adicional de escribir por WhatsApp.

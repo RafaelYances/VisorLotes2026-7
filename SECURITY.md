@@ -51,6 +51,11 @@
 - Datos validados y con longitud máxima; se muestran en el panel siempre como texto.
 - Solo el administrador los ve (requiere sesión). Las archivadas se borran solas a los 2 años.
 
+### Estadísticas
+- Anónimas: identificador aleatorio del navegador; no se guardan IPs ni datos personales.
+- Solo eventos válidos de proyectos visibles y lotes existentes; mismo origen; límite por conexión; robots excluidos; deduplicadas por persona/día/lote (no se inflan recargando).
+- El dueño solo puede consultar las de sus proyectos; el administrador, todas.
+
 ### Privacidad de proyectos ocultos
 - Un proyecto oculto o eliminado no aparece en la lista, su ficha y galería responden 404, y tampoco se exponen sus estados ni portada en el resumen público.
 

@@ -9,6 +9,7 @@ import { audit, ensureSchema } from './db';
 import { galleryAdmin, galleryPublic, gallerySummary, serveFile } from './gallery';
 import { body, fail, json, sameOrigin } from './http';
 import { createLead, leadsAdmin } from './leads';
+import { parseDays, projectStats, track } from './stats';
 import { ownerApi, ownersAdmin } from './owners';
 import { guardStaticData, loadDetail, lotIds, projectsAdmin, projectsPublic } from './projects';
 
@@ -56,6 +57,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   }
 
   if (path === '/api/public/leads' && method === 'POST') return createLead(env, req, ip);
+  if (path === '/api/public/track' && method === 'POST') return track(env, req, ip);
 
   if (path.startsWith('/api/public/project') && method === 'GET') {
     const r = await projectsPublic(env, req, path);
@@ -212,6 +214,11 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   if (path.startsWith('/api/admin/project')) return projectsAdmin(env, req, path, ip);
   if (path.startsWith('/api/admin/leads')) return leadsAdmin(env, req, path, ip);
   if (path.startsWith('/api/admin/owners')) return ownersAdmin(env, req, path, ip);
+  if (path === '/api/admin/stats' && method === 'GET') {
+    const project = new URL(req.url).searchParams.get('project') || '';
+    if (!/^[a-z0-9-]{1,60}$/.test(project)) return fail(400, 'Proyecto inválido');
+    return json(await projectStats(db, project, parseDays(req)));
+  }
 
   if (path === '/api/admin/audit' && method === 'GET') {
     const { results } = await db.prepare('SELECT ts, action, project, detail, ip FROM audit ORDER BY id DESC LIMIT 60').all();
