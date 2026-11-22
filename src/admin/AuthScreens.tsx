@@ -160,11 +160,17 @@ export function Setup({ onDone }: { onDone: () => void }) {
         <form key="setup-token" onSubmit={start} className="space-y-4">
           <Field
             label="Código de configuración"
-            type="password"
+            type="text"
+            name="setup-token"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             required
             autoFocus
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            hint="Se ve lo que escribes para que verifiques: mayúsculas, minúsculas y espacios deben coincidir exactamente."
           />
           <ErrorBox msg={error} />
           <SubmitButton busy={busy}>Continuar</SubmitButton>

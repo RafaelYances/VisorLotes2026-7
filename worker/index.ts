@@ -96,7 +96,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     if (await adminRow(db)) return fail(409, 'El panel ya tiene administrador');
     if (await isThrottled(db, ip)) return fail(429, 'Demasiados intentos. Espera unos minutos.');
     const b = await body<{ token?: string }>(req);
-    const expected = env.ADMIN_SETUP_TOKEN || '';
+    const expected = (env.ADMIN_SETUP_TOKEN || '').trim();
     if (expected.length < 16 || !b?.token || !safeEqual(b.token, expected)) {
       await recordAttempt(db, ip, false);
       return fail(
@@ -116,7 +116,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     if (await adminRow(db)) return fail(409, 'El panel ya tiene administrador');
     if (await isThrottled(db, ip)) return fail(429, 'Demasiados intentos. Espera unos minutos.');
     const b = await body<{ token?: string; email?: string; password?: string; secret?: string; code?: string }>(req);
-    const expected = env.ADMIN_SETUP_TOKEN || '';
+    const expected = (env.ADMIN_SETUP_TOKEN || '').trim();
     if (expected.length < 16 || !b?.token || !safeEqual(b.token, expected)) {
       await recordAttempt(db, ip, false);
       return fail(401, 'Código de configuración incorrecto');
