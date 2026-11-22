@@ -444,7 +444,7 @@ async function buildProject(slug) {
   const preview = {
     w: round(maxE - minE, 1),
     h: round(maxN - minN, 1),
-    lots: lots.map((l) => ({ d: toSvg(lotsRaw.get(l.id).ring), s: l.status })),
+    lots: lots.map((l) => ({ id: l.id, d: toSvg(lotsRaw.get(l.id).ring), s: l.status })),
   };
 
   const location = { ...meta.location };

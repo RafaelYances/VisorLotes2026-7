@@ -51,10 +51,29 @@ src/
 
 El navegador **ya no lee el DXF**: el script lo convierte una sola vez en JSON (78 KB para 108 lotes), con área, perímetro, frente, fondo, lados, colindancias y orientación ya calculados desde las coordenadas UTM originales.
 
+## Panel de administración (`/admin`)
+
+Gestiona el sitio sin tocar código. Etapa 1: **estados y precios de los lotes** (con efecto inmediato en el visor).
+
+**Seguridad del ingreso**
+- Una sola cuenta de administración, protegida con **contraseña + código de 6 dígitos** de una app autenticadora (Google Authenticator, Microsoft Authenticator…).
+- Contraseña guardada con PBKDF2 (nunca en texto plano); sesiones de 12 h en cookie `HttpOnly`, `Secure`, `SameSite=Strict`.
+- Bloqueo tras 5 intentos fallidos por IP (15 min) y 30 en total por hora; los códigos no se pueden reutilizar.
+- Registro de actividad (ingresos, intentos fallidos y cambios) en la pestaña *Actividad*, con botón para cerrar todas las sesiones.
+
+**Primera configuración (una sola vez)**
+1. En Cloudflare → tu Worker → *Settings → Variables and secrets* (las de **runtime**) → *Add* → tipo **Secret**:
+   `ADMIN_SETUP_TOKEN` = una frase larga que solo tú conozcas (mínimo 16 caracteres).
+2. Abre `https://tu-sitio/admin`, escribe esa frase, crea tu contraseña y escanea el código QR con tu app autenticadora.
+3. Listo: el registro queda cerrado para siempre. Puedes borrar `ADMIN_SETUP_TOKEN` si quieres.
+
+**Base de datos:** Cloudflare D1 llamada `visorlotes` (se crea sola en la primera publicación).
+
+**En tu computador:** crea `.dev.vars` con `ADMIN_SETUP_TOKEN=...`, ejecuta `npm run build` y luego `npm run dev:api` (servidor local en <http://localhost:8787>). Para trabajar con recarga automática usa además `npm run dev` (el visor en :5173 envía `/api` al servidor local).
+
 ## Actualizar el estado o precio de los lotes
 
-1. Edita `data/projects/<slug>/lotes.xlsx` (columna **Estado**: `Disponible`, `Reservado` o `Vendido`; columna **Precio**: número o `Consultar`).
-2. Ejecuta `npm run data` (o reinicia `npm run dev`).
+Desde el panel `/admin` (recomendado). Los valores del Excel (`data/projects/<slug>/lotes.xlsx`) son los iniciales; lo que cambies en el panel tiene prioridad.
 
 ## Agregar un proyecto nuevo
 

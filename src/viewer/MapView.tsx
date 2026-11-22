@@ -27,6 +27,11 @@ interface Props {
   onBearing?: (deg: number) => void;
 }
 
+const lotFeatures = (project: Project): GeoJSON.FeatureCollection => ({
+  type: 'FeatureCollection',
+  features: project.lots.map((l) => poly(l.coords, { id: l.id, status: l.status, numero: l.numero, color: STATUS[l.status].color })),
+});
+
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 const poly = (coords: [number, number][], properties: Record<string, unknown> = {}) => ({
   type: 'Feature' as const,
@@ -100,12 +105,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         map.addSource('lots', {
           type: 'geojson',
           promoteId: 'id',
-          data: {
-            type: 'FeatureCollection',
-            features: project.lots.map((l) =>
-              poly(l.coords, { id: l.id, status: l.status, numero: l.numero, color: STATUS[l.status].color }),
-            ),
-          },
+          data: lotFeatures(project),
         });
         map.addSource('lot-points', {
           type: 'geojson',
@@ -459,7 +459,14 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project]);
+  }, [project.slug]);
+
+  // ------------------------------------------- estados actualizados (panel / datos en vivo)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    (map.getSource('lots') as GeoJSONSource | undefined)?.setData(lotFeatures(project));
+  }, [project, loaded]);
 
   // ------------------------------------------------------------ base layer
   useEffect(() => {

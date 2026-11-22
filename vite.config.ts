@@ -6,6 +6,8 @@ export default defineConfig({
   // En GitHub Pages el sitio vive en /<repositorio>/ (lo define el workflow con BASE_PATH)
   base: process.env.BASE_PATH || '/',
   plugins: [react(), tailwindcss()],
+  // En desarrollo, /api/* se envía al servidor local de Cloudflare (npm run dev:api)
+  server: { proxy: { '/api': 'http://127.0.0.1:8787' } },
   build: {
     chunkSizeWarningLimit: 1200,
     rollupOptions: {

@@ -5,6 +5,7 @@ import { NotFound } from './pages/NotFound';
 import { FullLoader } from './components/Loader';
 
 const ProjectPage = lazy(() => import('./pages/ProjectPage'));
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 export function App() {
   return (
@@ -13,6 +14,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/proyecto/:slug" element={<ProjectPage />} />
+          <Route path="/admin/*" element={<AdminApp />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

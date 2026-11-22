@@ -1,10 +1,23 @@
-// Configuración para publicar en Cloudflare Workers (sitio estático).
+// Configuración de Cloudflare Workers: sitio estático + API del panel (/api/*).
 {
   "name": "visorlotes2026-7",
+  "main": "worker/index.ts",
   "compatibility_date": "2025-09-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // Rutas como /proyecto/... se resuelven en la app
-    "not_found_handling": "single-page-application"
-  }
+    "not_found_handling": "single-page-application",
+    // Solo /api/* pasa por el Worker; el resto lo sirve Cloudflare directamente
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      // Sin "database_id": Wrangler crea la base de datos automáticamente en la primera publicación
+      // y la reutiliza después. Si prefieres crearla a mano, pega aquí su ID.
+      "database_name": "visorlotes"
+    }
+  ],
+  "observability": { "enabled": true }
 }

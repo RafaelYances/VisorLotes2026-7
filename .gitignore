@@ -10,3 +10,5 @@ public/data
 *.tsbuildinfo
 .wrangler
 public/media
+.dev.vars
+.wrangler

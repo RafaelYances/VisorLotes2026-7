@@ -74,7 +74,7 @@ export interface ProjectCard {
   logo: string | null;
   stats: ProjectStats;
   bounds: [number, number, number, number];
-  preview: { w: number; h: number; lots: { d: string; s: LotStatus }[] };
+  preview: { w: number; h: number; lots: { id: string; d: string; s: LotStatus }[] };
   cover: { src: string; thumb: string; blur: string } | null;
   media: { photos: number; videos: number };
 }
