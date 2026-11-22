@@ -3,7 +3,7 @@ export const SITE = {
   name: 'Lotes del Caribe',
   slogan: 'Encuentra tu lote ideal',
   /** WhatsApp comercial de la plataforma (formato internacional, sin +). */
-  whatsapp: '573044130405',
+  whatsapp: '573114007716',
   /**
    * Endpoint opcional para el formulario "Publica tu proyecto"
    * (Formspree, Web3Forms, Google Apps Script…). Defínelo en .env como
