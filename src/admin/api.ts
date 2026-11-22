@@ -1,5 +1,21 @@
 import { asset } from '../lib/data';
-import type { GalleryItem, LotStatus } from '../types';
+import type { GalleryItem, Highlight, LotStatus, Project, ProjectCard } from '../types';
+
+export type AdminProjectCard = ProjectCard & { visible: boolean; source: 'static' | 'panel' };
+
+/** Datos editables de un proyecto. */
+export interface ProjectMeta {
+  name: string;
+  tagline: string;
+  description: string;
+  status: string;
+  location: { city: string; region: string; lat?: number | string; lng?: number | string; mapsUrl?: string };
+  contact: { whatsapp: string; phoneLabel: string };
+  currency: string;
+  highlights: Highlight[];
+  setbacks: { front: number; back: number; side: number };
+  logo: string | null;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -57,4 +73,22 @@ export const adminApi = {
   galleryUpdate: (project: string, changes: { order?: string[]; items?: { id: string; caption?: string; cover?: boolean }[] }) =>
     call<{ ok: true; items: GalleryItem[] }>('gallery/update', { project, ...changes }),
   galleryDelete: (project: string, id: string) => call<{ ok: true }>('gallery/delete', { project, id }),
+  projects: () => call<{ projects: AdminProjectCard[] }>('projects'),
+  project: (slug: string) =>
+    call<Project & { _admin: { source: 'static' | 'panel'; visible: boolean; hasPlan: boolean } }>(`project/${slug}`),
+  saveProject: (d: { slug: string; create?: boolean; meta: ProjectMeta; plan?: unknown; preview?: unknown }) =>
+    call<{ ok: true; visible: boolean }>('projects/save', d),
+  setVisibility: (slug: string, visible: boolean, password: string, code: string) =>
+    call<{ ok: true; visible: boolean }>('projects/visibility', { slug, visible, password, code }),
+  deleteProject: (slug: string, confirmName: string, password: string, code: string) =>
+    call<{ ok: true }>('projects/delete', { slug, confirmName, password, code }),
+  async uploadLogo(slug: string, file: Blob): Promise<{ ok: true; src: string }> {
+    const fd = new FormData();
+    fd.append('slug', slug);
+    fd.append('logo', file, 'logo');
+    const r = await fetch(asset('api/admin/projects/logo'), { method: 'POST', body: fd, credentials: 'same-origin' });
+    const data = (await r.json().catch(() => ({}))) as { ok: true; src: string; error?: string };
+    if (!r.ok) throw new ApiError(r.status, data.error || `Error ${r.status}`);
+    return data;
+  },
 };

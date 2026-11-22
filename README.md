@@ -57,6 +57,9 @@ Gestiona el sitio sin tocar código, con efecto inmediato en el visor:
 - **Lotes:** estados y precios (individual o en grupo).
 - **Galería:** subir fotos y videos (arrastrando o desde el celular), ordenarlos, escribir sus textos, elegir la portada y eliminarlos. Las fotos se optimizan en el navegador antes de subir (WebP 1920 px + miniatura + vista previa borrosa). Videos MP4/WebM de hasta 60 MB (recomendado < 15 MB). Se guardan en **Cloudflare R2** (`visorlotes-media`, 10 GB gratis) y se sirven desde `/files/…`.
 - La primera vez que abres la galería de un proyecto en el panel, se importan las fotos de `data/projects/<slug>/galeria/`. Desde ese momento la galería del sitio es la del panel.
+- **Proyectos:** botón **Nuevo proyecto** (datos → plano DXF procesado en el navegador con vista previa sobre el satélite → crear). Los proyectos nuevos se crean **ocultos**. En la pestaña **Proyecto** se editan nombre, textos, ubicación, contacto, moneda, logo, destacados y retiros, y se puede **reemplazar el plano** (los estados editados se conservan para los lotes con el mismo nombre).
+- **Doble autorización** para **publicar/ocultar** y **eliminar** un proyecto: vuelve a pedir contraseña y un código nuevo de 6 dígitos; para eliminar, además, escribir el nombre del proyecto. Eliminar borra datos, galería, logo y plano. Los proyectos del repositorio (`data/projects/`) se retiran del sitio, pero sus archivos quedan en GitHub.
+- El procesamiento del DXF está en `shared/cad.js` y lo usan tanto `npm run data` como el panel, así que el resultado es idéntico.
 
 **Seguridad del ingreso**
 - Una sola cuenta de administración, protegida con **contraseña + código de 6 dígitos** de una app autenticadora (Google Authenticator, Microsoft Authenticator…).

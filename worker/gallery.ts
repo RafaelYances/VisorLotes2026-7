@@ -7,6 +7,7 @@
  */
 import { audit } from './db';
 import { body, fail, json, originOk, sameOrigin } from './http';
+import { loadDetail } from './projects';
 
 const SLUG = /^[a-z0-9-]{1,60}$/;
 const ID = /^[a-f0-9-]{36}$/;
@@ -58,9 +59,8 @@ async function isSeeded(db: D1Database, project: string) {
 /** Copia a la base de datos la galería publicada del proyecto (solo una vez). */
 async function seed(env: Env, req: Request, project: string) {
   if (await isSeeded(env.DB, project)) return true;
-  const r = await env.ASSETS.fetch(new Request(new URL(`/data/projects/${project}.json`, req.url)));
-  if (!r.ok) return false;
-  const data = (await r.json()) as { gallery?: Record<string, unknown>[] };
+  const data = (await loadDetail(env, req, project, true)) as { gallery?: Record<string, unknown>[] } | null;
+  if (!data) return false;
   const now = Date.now();
   const stmts = (data.gallery ?? []).map((g, i) =>
     env.DB.prepare(
@@ -122,7 +122,7 @@ export async function gallerySummary(db: D1Database) {
 
 /** Sirve un archivo de R2 (con soporte de rangos para que los videos se puedan adelantar). */
 export async function serveFile(env: Env, req: Request, key: string) {
-  if (!/^p\/[a-z0-9-]{1,60}\/[a-f0-9-]{36}-(full|thumb|poster|video)\.(webp|jpg|mp4|webm)$/.test(key))
+  if (!/^p\/[a-z0-9-]{1,60}\/[a-f0-9-]{36}-(full|thumb|poster|video|logo)\.(webp|jpg|png|mp4|webm)$/.test(key))
     return new Response('No encontrado', { status: 404 });
   const headers = new Headers({
     'Cache-Control': 'public, max-age=31536000, immutable',

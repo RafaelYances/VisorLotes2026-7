@@ -33,10 +33,15 @@ interface R2Bucket {
   head(key: string): Promise<{ size: number; httpEtag: string; httpMetadata?: { contentType?: string } } | null>;
   put(
     key: string,
-    value: ArrayBuffer | ReadableStream | Blob,
+    value: ArrayBuffer | ReadableStream | Blob | string,
     options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
   ): Promise<unknown>;
   delete(keys: string | string[]): Promise<void>;
+  list(options?: {
+    prefix?: string;
+    cursor?: string;
+    limit?: number;
+  }): Promise<{ objects: { key: string }[]; truncated: boolean; cursor?: string }>;
 }
 
 interface Env {

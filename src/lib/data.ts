@@ -79,15 +79,37 @@ function applyCard(c: ProjectCard, o: Overrides[string] = {}): ProjectCard {
   };
 }
 
+/** Lista de proyectos visibles (servidor; si no responde, la publicada). */
+async function loadCards(): Promise<ProjectCard[]> {
+  try {
+    const r = await fetch(asset('api/public/projects'), { cache: 'no-store' });
+    if (r.ok) return ((await r.json()) as { projects: ProjectCard[] }).projects;
+  } catch {
+    /* sin servidor */
+  }
+  return load<ProjectCard[]>(asset('data/projects.json'));
+}
+
 export const loadProjects = () =>
-  Promise.all([load<ProjectCard[]>(asset('data/projects.json')), loadLive()]).then(([cards, live]) =>
+  Promise.all([loadCards(), loadLive()]).then(([cards, live]) =>
     cards.map((c) => {
       const card = applyCard(c, live.overrides[c.slug]);
       const g = live.gallery[c.slug];
       return g ? { ...card, cover: g.cover, media: { photos: g.photos, videos: g.videos } } : card;
     }),
   );
-export const loadProjectRaw = (slug: string) => load<Project>(asset(`data/projects/${slug}.json`));
+/** Ficha completa (servidor: incluye proyectos creados en el panel y datos editados). */
+export async function loadProjectRaw(slug: string): Promise<Project> {
+  let r: Response | null = null;
+  try {
+    r = await fetch(asset(`api/public/project/${slug}`), { cache: 'no-store' });
+  } catch {
+    /* sin servidor */
+  }
+  if (r?.ok) return (await r.json()) as Project;
+  if (r && r.status === 404) throw new Error('Proyecto no encontrado');
+  return load<Project>(asset(`data/projects/${slug}.json`));
+}
 export const loadProject = (slug: string) =>
   Promise.all([loadProjectRaw(slug), loadOverrides(), loadLiveGallery(slug)]).then(([p, o, gallery]) => {
     const project = applyOverrides(p, o[slug]);

@@ -8,22 +8,12 @@ import { hashPassword, newTotpSecret, safeEqual, verifyPassword, verifyTotp } fr
 import { audit, ensureSchema } from './db';
 import { galleryAdmin, galleryPublic, gallerySummary, serveFile } from './gallery';
 import { body, fail, json, sameOrigin } from './http';
+import { lotIds, projectsAdmin, projectsPublic } from './projects';
 
+// Rutas de subida de archivos (multipart): validan su origen por su cuenta
+const MULTIPART = new Set(['/api/admin/gallery/upload', '/api/admin/projects/logo']);
 const STATUSES = new Set(['available', 'reserved', 'sold']);
 const SLUG = /^[a-z0-9-]{1,60}$/;
-
-// Ids de lotes válidos por proyecto (leídos de los datos publicados, con caché en memoria)
-const lotCache = new Map<string, { at: number; ids: Set<string> }>();
-async function projectLots(env: Env, req: Request, slug: string) {
-  const hit = lotCache.get(slug);
-  if (hit && Date.now() - hit.at < 5 * 60_000) return hit.ids;
-  const r = await env.ASSETS.fetch(new Request(new URL(`/data/projects/${slug}.json`, req.url)));
-  if (!r.ok) return null;
-  const data = (await r.json()) as { lots?: { id: string }[] };
-  const ids = new Set((data.lots ?? []).map((l) => l.id));
-  lotCache.set(slug, { at: Date.now(), ids });
-  return ids;
-}
 
 async function adminRow(db: D1Database) {
   return db
@@ -53,11 +43,16 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   const gm = path.match(/^\/api\/public\/gallery\/([a-z0-9-]{1,60})$/);
   if (gm && method === 'GET') return galleryPublic(env, gm[1]);
 
+  if (path.startsWith('/api/public/project') && method === 'GET') {
+    const r = await projectsPublic(env, req, path);
+    if (r) return r;
+  }
+
   if (!path.startsWith('/api/admin/')) return fail(404, 'No encontrado');
 
   // Todas las escrituras del panel exigen mismo origen
   // (la subida de archivos es multipart: su origen se valida dentro de galleryAdmin)
-  if (method !== 'GET' && path !== '/api/admin/gallery/upload' && !sameOrigin(req)) return fail(403, 'Origen no permitido');
+  if (method !== 'GET' && !MULTIPART.has(path) && !sameOrigin(req)) return fail(403, 'Origen no permitido');
 
   // ------------------------------------------------------------ estado de sesión
   if (path === '/api/admin/session' && method === 'GET') {
@@ -153,7 +148,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     const b = await body<{ project?: string; changes?: { lot: string; status: string; price: number | null }[] }>(req);
     if (!b?.project || !SLUG.test(b.project) || !Array.isArray(b.changes) || b.changes.length === 0 || b.changes.length > 500)
       return fail(400, 'Solicitud inválida');
-    const ids = await projectLots(env, req, b.project);
+    const ids = await lotIds(env, req, b.project);
     if (!ids) return fail(404, 'Proyecto no encontrado');
     for (const c of b.changes) {
       if (!ids.has(c.lot)) return fail(400, `El lote ${String(c.lot).slice(0, 20)} no existe`);
@@ -176,6 +171,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   }
 
   if (path.startsWith('/api/admin/gallery')) return galleryAdmin(env, req, path, ip);
+  if (path.startsWith('/api/admin/project')) return projectsAdmin(env, req, path, ip);
 
   if (path === '/api/admin/audit' && method === 'GET') {
     const { results } = await db.prepare('SELECT ts, action, project, detail, ip FROM audit ORDER BY id DESC LIMIT 60').all();

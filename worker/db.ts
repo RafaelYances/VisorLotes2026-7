@@ -44,6 +44,18 @@ const SCHEMA = [
      created_at INTEGER NOT NULL
    )`,
   `CREATE INDEX IF NOT EXISTS gallery_project ON gallery (project, position)`,
+  `CREATE TABLE IF NOT EXISTS projects (
+     slug TEXT PRIMARY KEY,
+     source TEXT NOT NULL CHECK (source IN ('static', 'panel')),
+     meta TEXT NOT NULL DEFAULT '{}',
+     card TEXT,
+     has_plan INTEGER NOT NULL DEFAULT 0,
+     visible INTEGER NOT NULL DEFAULT 1,
+     deleted INTEGER NOT NULL DEFAULT 0,
+     position INTEGER NOT NULL DEFAULT 0,
+     created_at INTEGER NOT NULL,
+     updated_at INTEGER NOT NULL
+   )`,
   `CREATE TABLE IF NOT EXISTS project_flags (project TEXT NOT NULL, flag TEXT NOT NULL, PRIMARY KEY (project, flag))`,
   `CREATE TABLE IF NOT EXISTS audit (
      id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,14 +1,15 @@
-import { CheckSquare, ExternalLink, History, Images, Loader2, LogOut, Search, Square, Tag, X } from 'lucide-react';
+import { Building2, CheckSquare, ExternalLink, History, Images, Loader2, LogOut, Plus, Search, Square, Tag, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { BrandMark, StatusBadge, StatusDot } from '../components/ui';
 import { STATUS } from '../config';
-import { applyOverrides, loadOverrides, loadProjectRaw, loadProjects } from '../lib/data';
+import { applyOverrides, loadOverrides } from '../lib/data';
 import { cx, m2, num, price } from '../lib/format';
-import type { LotStatus, Project, ProjectCard } from '../types';
+import type { LotStatus, Project } from '../types';
 import { MapView, type MapHandle } from '../viewer/MapView';
-import { adminApi, ApiError, type AuditItem, type LotChange } from './api';
+import { adminApi, ApiError, type AdminProjectCard, type AuditItem, type LotChange } from './api';
+import { NewProjectWizard, ProjectEditor } from './ProjectAdmin';
 import { GalleryManager } from './GalleryManager';
 
 const STATUSES: LotStatus[] = ['available', 'reserved', 'sold'];
@@ -19,13 +20,14 @@ function parsePrice(v: string): number | null {
 }
 
 export function Dashboard({ email, onLogout }: { email?: string; onLogout: () => void }) {
-  const [cards, setCards] = useState<ProjectCard[]>([]);
+  const [cards, setCards] = useState<AdminProjectCard[]>([]);
+  const [wizard, setWizard] = useState(false);
   const [slug, setSlug] = useState<string>('');
   const [project, setProject] = useState<Project | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<LotStatus | 'all'>('all');
   const [q, setQ] = useState('');
-  const [tab, setTab] = useState<'lots' | 'gallery' | 'audit'>('lots');
+  const [tab, setTab] = useState<'lots' | 'gallery' | 'project' | 'audit'>('lots');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const mapRef = useRef<MapHandle>(null);
@@ -42,18 +44,33 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
     [onLogout],
   );
 
+  const loadList = useCallback(
+    (select?: string) =>
+      adminApi
+        .projects()
+        .then((r) => {
+          setCards(r.projects);
+          setSlug((s) => select || (r.projects.some((c) => c.slug === s) ? s : r.projects[0]?.slug || ''));
+        })
+        .catch(handleError),
+    [handleError],
+  );
   useEffect(() => {
-    loadProjects().then((c) => {
-      setCards(c);
-      setSlug((s) => s || c[0]?.slug || '');
-    });
-  }, []);
+    loadList();
+  }, [loadList]);
 
-  // Proyecto con los estados actuales del servidor (sin caché)
-  const reload = useCallback(async (s: string) => {
-    const [raw, o] = await Promise.all([loadProjectRaw(s), loadOverrides()]);
-    setProject(applyOverrides(raw, o[s]));
-  }, []);
+  // Proyecto con los estados actuales del servidor (incluye proyectos ocultos)
+  const reload = useCallback(
+    async (s: string) => {
+      try {
+        const [raw, o] = await Promise.all([adminApi.project(s), loadOverrides()]);
+        setProject(applyOverrides(raw, o[s]));
+      } catch (e) {
+        handleError(e);
+      }
+    },
+    [handleError],
+  );
   useEffect(() => {
     if (!slug) return;
     setProject(null);
@@ -137,9 +154,17 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
           {cards.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.name}
+              {c.visible ? '' : ' (oculto)'}
             </option>
           ))}
         </select>
+        <button
+          onClick={() => setWizard(true)}
+          className="bg-brand-600 hover:bg-brand-700 inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-bold text-white"
+          title="Crear un proyecto nuevo"
+        >
+          <Plus className="size-4" /> <span className="hidden sm:inline">Nuevo proyecto</span>
+        </button>
         <div className="ml-auto flex items-center gap-1">
           {project && (
             <Link
@@ -189,6 +214,7 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
               [
                 ['lots', 'Lotes', Tag],
                 ['gallery', 'Galería', Images],
+                ['project', 'Proyecto', Building2],
                 ['audit', 'Actividad', History],
               ] as const
             ).map(([k, label, I]) => (
@@ -208,6 +234,24 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
 
           {tab === 'audit' ? (
             <AuditList onError={handleError} onLogoutAll={() => logout(true)} />
+          ) : tab === 'project' ? (
+            slug ? (
+              <ProjectEditor
+                key={slug}
+                slug={slug}
+                onError={handleError}
+                notify={notify}
+                onChanged={() => {
+                  loadList();
+                  reload(slug);
+                }}
+                onDeleted={() => {
+                  setTab('lots');
+                  setSlug('');
+                  loadList();
+                }}
+              />
+            ) : null
           ) : tab === 'gallery' ? (
             slug ? (
               <GalleryManager key={slug} project={slug} onError={handleError} notify={notify} />
@@ -360,6 +404,17 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
         </aside>
       </div>
 
+      <NewProjectWizard
+        open={wizard}
+        onClose={() => setWizard(false)}
+        existing={cards.map((c) => c.slug)}
+        onCreated={(s) => {
+          notify(true, 'Proyecto creado (oculto). Complétalo y publícalo en la pestaña Proyecto.');
+          loadList(s);
+          setTab('project');
+        }}
+      />
+
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -444,6 +499,13 @@ function PriceEditor({ initial, busy, onSave }: { initial: number | null; busy: 
 }
 
 const ACTION: Record<string, string> = {
+  project_create: 'Proyecto creado',
+  project_edit: 'Datos de proyecto editados',
+  project_plan: 'Plano reemplazado',
+  project_show: 'Proyecto publicado',
+  project_hide: 'Proyecto ocultado',
+  project_delete: 'Proyecto eliminado',
+  stepup_failed: 'Doble autorización fallida',
   lots: 'Cambio de lotes',
   gallery_add: 'Foto o video agregado',
   gallery_update: 'Galería reordenada / editada',
@@ -481,7 +543,7 @@ function AuditList({ onError, onLogoutAll }: { onError: (e: unknown) => void; on
               key={i}
               className={cx(
                 'rounded-xl p-3 ring-1',
-                it.action === 'login_failed' ? 'bg-rose-50 ring-rose-100' : 'bg-slate-50 ring-slate-100',
+                it.action === 'login_failed' || it.action === 'stepup_failed' ? 'bg-rose-50 ring-rose-100' : 'bg-slate-50 ring-slate-100',
               )}
             >
               <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
