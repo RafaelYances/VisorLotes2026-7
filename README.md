@@ -1,4 +1,4 @@
-# VisorLotes 2.0
+# Lotes del Caribe
 
 Plataforma multi‑proyecto para vender lotes sobre mapa satelital: cada proyecto con su plano CAD real, estado de cada lote, medidas, colindancias y un **diseñador de casas** que dibuja a escala real qué vivienda cabe en el lote, respetando los retiros.
 

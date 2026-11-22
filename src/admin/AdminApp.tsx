@@ -17,7 +17,7 @@ export default function AdminApp() {
   }, []);
 
   useEffect(() => {
-    document.title = 'Panel · VisorLotes';
+    document.title = 'Panel · Lotes del Caribe';
     // Que los buscadores no indexen el panel
     const meta = document.createElement('meta');
     meta.name = 'robots';

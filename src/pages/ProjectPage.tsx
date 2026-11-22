@@ -21,7 +21,7 @@ export default function ProjectPage() {
   const { slug = '' } = useParams();
   const { data: project, error, loading } = useAsync(() => loadProject(slug), [slug]);
   useEffect(() => {
-    if (project) document.title = `${project.name} · Visor de lotes`;
+    if (project) document.title = `${project.name} · Lotes del Caribe`;
   }, [project]);
   if (loading) return <FullLoader label="Preparando el mapa del proyecto…" />;
   if (error || !project) return <NotFound message="Este proyecto no existe o ya no está disponible." />;

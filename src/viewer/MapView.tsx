@@ -406,24 +406,24 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         // Mapas de Google (servicio oficial) si hay clave configurada
         if (!googleEnabled) {
           console.info(
-            '[VisorLotes] Google Maps DESACTIVADO: la compilación no recibió VITE_GOOGLE_MAPS_KEY. ' +
+            '[Lotes del Caribe] Google Maps DESACTIVADO: la compilación no recibió VITE_GOOGLE_MAPS_KEY. ' +
               'En Cloudflare debe ir en Settings → Build → Build variables (no en "Runtime variables") y luego volver a compilar.',
           );
         } else {
-          console.info('[VisorLotes] Google Maps: clave detectada, creando sesión…');
+          console.info('[Lotes del Caribe] Google Maps: clave detectada, creando sesión…');
         }
         if (googleEnabled) {
           Promise.all([getSession('roadmap'), getSession('satellite')])
             .then(([roadmap, satellite]) => {
               if (cancelled || !roadmap || !satellite) return;
               sessions.current = { roadmap, satellite };
-              console.info('[VisorLotes] Google Maps ACTIVO ✔');
+              console.info('[Lotes del Caribe] Google Maps ACTIVO ✔');
               addGoogleLayers(map, { roadmap: tileUrl(roadmap), satellite: tileUrl(satellite) }, 'greens');
               setProvider('google');
             })
             .catch((err) => {
               console.warn(
-                '[VisorLotes] Google Maps RECHAZÓ la sesión (revisa restricciones de la clave y que Map Tiles API esté habilitada). Se usa el mapa gratis. Detalle:',
+                '[Lotes del Caribe] Google Maps RECHAZÓ la sesión (revisa restricciones de la clave y que Map Tiles API esté habilitada). Se usa el mapa gratis. Detalle:',
                 String(err),
               );
               clearSessions();
@@ -434,7 +434,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
             const status = (ev.error as unknown as { status?: number })?.status;
             if (src?.startsWith('g-') && (status === 401 || status === 403 || status === 429)) {
               console.warn(
-                `[VisorLotes] Google Maps respondió ${status} al cargar el mapa (clave, dominio o cuota). Se usa el mapa gratis.`,
+                `[Lotes del Caribe] Google Maps respondió ${status} al cargar el mapa (clave, dominio o cuota). Se usa el mapa gratis.`,
               );
               clearSessions();
               setProvider('free');

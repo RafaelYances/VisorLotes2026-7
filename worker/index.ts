@@ -108,7 +108,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     }
     const secret = newTotpSecret();
     const host = new URL(req.url).hostname;
-    const otpauth = `otpauth://totp/${encodeURIComponent(`VisorLotes (${host})`)}?secret=${secret}&issuer=VisorLotes&digits=6&period=30`;
+    const otpauth = `otpauth://totp/${encodeURIComponent(`Lotes del Caribe (${host})`)}?secret=${secret}&issuer=${encodeURIComponent('Lotes del Caribe')}&digits=6&period=30`;
     return json({ secret, otpauth });
   }
 

@@ -1,10 +1,9 @@
 /** Configuración general de la plataforma. Cambia aquí marca y contacto. */
 export const SITE = {
-  name: 'VisorLotes',
+  name: 'Lotes del Caribe',
   slogan: 'Encuentra tu lote ideal',
   /** WhatsApp comercial de la plataforma (formato internacional, sin +). */
   whatsapp: '573044130405',
-  email: 'contacto@visorlotes.com',
   /**
    * Endpoint opcional para el formulario "Publica tu proyecto"
    * (Formspree, Web3Forms, Google Apps Script…). Defínelo en .env como

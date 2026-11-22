@@ -281,9 +281,12 @@ function Footer() {
     <footer className="bg-brand-950 text-brand-100/70">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 py-10 sm:flex-row sm:px-6 lg:px-8">
         <BrandMark light />
-        <p className="text-center text-sm">
-          © {new Date().getFullYear()} {SITE.name}. Información de referencia; confirma disponibilidad y precios con un asesor.
-        </p>
+        <div className="text-center text-sm">
+          <p className="text-brand-50/90 font-semibold">
+            © {new Date().getFullYear()} {SITE.name}. Todos los derechos reservados.
+          </p>
+          <p className="mt-1 text-xs">Información de referencia; confirma disponibilidad y precios con un asesor.</p>
+        </div>
         <a
           href={whatsappUrl(SITE.whatsapp, 'Hola')}
           target="_blank"

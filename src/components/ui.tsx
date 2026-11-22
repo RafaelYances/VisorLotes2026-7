@@ -2,21 +2,26 @@ import { Layers, MapPin, Palmtree, Route, Sparkles, Sun, Waves, type LucideIcon 
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { SITE, STATUS } from '../config';
+import { asset } from '../lib/data';
 import { cx } from '../lib/format';
 import type { LotStatus } from '../types';
 
 export function BrandMark({ light = false, className = '' }: { light?: boolean; className?: string }) {
   return (
     <Link to="/" className={cx('group flex items-center gap-2.5', className)} aria-label={`${SITE.name} – inicio`}>
-      <span className="from-brand-400 to-brand-700 shadow-glow relative grid size-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br transition-transform group-hover:scale-105">
-        <svg viewBox="0 0 32 32" className="size-5" aria-hidden>
-          <path d="M5 23 14 8l13 15z" fill="#ecfdf5" />
-          <path d="M5 23h22v3H5z" fill="#a7f3d0" />
-          <circle cx="23" cy="9" r="3" fill="#fde68a" />
-        </svg>
+      <span
+        className={cx(
+          'grid shrink-0 place-items-center transition-transform duration-300 group-hover:scale-105',
+          light && 'rounded-xl bg-white/95 p-1 shadow-lg shadow-black/20',
+        )}
+      >
+        <img src={asset('img/brand-logo.webp')} alt="" width={52} height={40} className={cx('w-auto', light ? 'h-8' : 'h-10')} />
       </span>
-      <span className={cx('text-lg font-extrabold tracking-tight', light ? 'text-white' : 'text-brand-950')}>
-        Visor<span className={light ? 'text-brand-300' : 'text-brand-600'}>Lotes</span>
+      <span className={cx('leading-none font-extrabold tracking-tight', light ? 'text-white' : 'text-brand-950')}>
+        <span className="block text-[17px]">Lotes</span>
+        <span className={cx('block text-[13px] font-bold tracking-[0.12em] uppercase', light ? 'text-brand-300' : 'text-brand-600')}>
+          del Caribe
+        </span>
       </span>
     </Link>
   );
