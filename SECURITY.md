@@ -38,6 +38,13 @@
 - `/admin` y `/api/` excluidos de buscadores (`robots.txt` y `X-Robots-Tag`).
 - El texto que viene de planos y del panel se muestra siempre como **texto**, nunca como HTML.
 
+### Portal de dueños (`/dueno`)
+- Cuentas separadas del administrador (otra tabla, otra cookie `__Host-vl_owner`): una sesión de dueño nunca da acceso al panel.
+- Alta solo por invitación del administrador: enlace aleatorio de un solo uso, vence en 7 días; en la base de datos se guarda solo su hash. El token va en el `#` del enlace (no viaja a ningún servidor en las cabeceras) y se borra de la barra de direcciones al abrirlo.
+- Contraseña (mín. 10) + código TOTP obligatorio; bloqueo por intentos fallidos; mismo mensaje y tiempo para correos existentes o no.
+- Permiso mínimo: solo cambia el **estado** de los lotes de **sus** proyectos (el servidor lo verifica en cada solicitud). El precio se conserva.
+- Quitar acceso cierra sus sesiones de inmediato; eliminar un proyecto elimina sus accesos e invitaciones.
+
 ### Formulario "Publica tu proyecto"
 - Solo acepta envíos desde el propio sitio, con campo trampa para bots, tiempo mínimo de llenado y límites (5 por hora por conexión, 300 por día).
 - Datos validados y con longitud máxima; se muestran en el panel siempre como texto.

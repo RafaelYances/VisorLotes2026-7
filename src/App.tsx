@@ -6,6 +6,7 @@ import { FullLoader } from './components/Loader';
 
 const ProjectPage = lazy(() => import('./pages/ProjectPage'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
+const OwnerApp = lazy(() => import('./owner/OwnerApp'));
 
 export function App() {
   return (
@@ -15,6 +16,7 @@ export function App() {
           <Route path="/" element={<Home />} />
           <Route path="/proyecto/:slug" element={<ProjectPage />} />
           <Route path="/admin/*" element={<AdminApp />} />
+          <Route path="/dueno/*" element={<OwnerApp />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

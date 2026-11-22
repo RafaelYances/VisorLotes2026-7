@@ -9,6 +9,7 @@ import { audit, ensureSchema } from './db';
 import { galleryAdmin, galleryPublic, gallerySummary, serveFile } from './gallery';
 import { body, fail, json, sameOrigin } from './http';
 import { createLead, leadsAdmin } from './leads';
+import { ownerApi, ownersAdmin } from './owners';
 import { guardStaticData, loadDetail, lotIds, projectsAdmin, projectsPublic } from './projects';
 
 // Rutas de subida de archivos (multipart): validan su origen por su cuenta
@@ -60,6 +61,8 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     const r = await projectsPublic(env, req, path);
     if (r) return r;
   }
+
+  if (path.startsWith('/api/owner/')) return ownerApi(env, req, path);
 
   if (!path.startsWith('/api/admin/')) return fail(404, 'No encontrado');
 
@@ -208,6 +211,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   if (path.startsWith('/api/admin/gallery')) return galleryAdmin(env, req, path, ip);
   if (path.startsWith('/api/admin/project')) return projectsAdmin(env, req, path, ip);
   if (path.startsWith('/api/admin/leads')) return leadsAdmin(env, req, path, ip);
+  if (path.startsWith('/api/admin/owners')) return ownersAdmin(env, req, path, ip);
 
   if (path === '/api/admin/audit' && method === 'GET') {
     const { results } = await db.prepare('SELECT ts, action, project, detail, ip FROM audit ORDER BY id DESC LIMIT 60').all();

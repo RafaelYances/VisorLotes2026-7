@@ -92,6 +92,14 @@ export const adminApi = {
   leadsCount: () => call<{ new: number }>('leads/count'),
   updateLead: (id: string, patch: { status?: Lead['status']; notes?: string }) => call<{ ok: true }>('leads/update', { id, ...patch }),
   deleteLead: (id: string) => call<{ ok: true }>('leads/delete', { id }),
+  owners: (project: string) =>
+    call<{
+      owners: { id: string; email: string; name: string; last_login: number | null; since: number }[];
+      invites: { id: string; created_at: number; expires_at: number }[];
+    }>(`owners?project=${encodeURIComponent(project)}`),
+  inviteOwner: (project: string) => call<{ ok: true; link: string; expires: number }>('owners/invite', { project }),
+  cancelInvite: (id: string) => call<{ ok: true }>('owners/cancel-invite', { id }),
+  revokeOwner: (ownerId: string, project: string) => call<{ ok: true }>('owners/revoke', { ownerId, project }),
   projects: () => call<{ projects: AdminProjectCard[] }>('projects'),
   project: (slug: string) =>
     call<Project & { _admin: { source: 'static' | 'panel'; visible: boolean; hasPlan: boolean } }>(`project/${slug}`),

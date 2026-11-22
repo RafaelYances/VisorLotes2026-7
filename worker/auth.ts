@@ -12,7 +12,7 @@ const GLOBAL_WINDOW = 60 * 60_000; // …cada hora
 
 export const clientIp = (req: Request) => req.headers.get('CF-Connecting-IP') || 'local';
 
-function readCookie(req: Request, name: string) {
+export function readCookie(req: Request, name: string) {
   const raw = req.headers.get('Cookie') || '';
   for (const part of raw.split(';')) {
     const [k, ...v] = part.trim().split('=');

@@ -117,6 +117,15 @@ Desde el panel `/admin` (recomendado). Los valores del Excel (`data/projects/<sl
 Las fotos se optimizan solas al compilar (WebP de 1920 px + miniatura de 640 px + vista previa borrosa), así que puedes subirlas grandes.
 **Videos:** máximo **25 MB** por archivo (límite de Cloudflare; si lo supera se omite y se avisa en la compilación). Recomendado: menos de 15 MB, 720p o 1080p, 15–30 segundos, sin audio. Para comprimir uno con [HandBrake](https://handbrake.fr) usa el preset *Web → Social 25 MB 30 Seconds 1080p* o *Fast 720p30*.
 
+## Portal de dueños (`/dueno`)
+
+Para que el dueño de cada proyecto actualice **solo el estado de sus lotes** (disponible, reservado, vendido), sin depender del administrador:
+1. Panel → pestaña **Proyecto** → **Acceso del dueño** → **Crear enlace de invitación** → enviarlo por WhatsApp. El enlace es de **un solo uso** y vence en **7 días**.
+2. El dueño crea su cuenta (nombre, correo, contraseña y código de 6 dígitos con Google Authenticator) y entra por `/dueno`.
+3. Solo ve sus proyectos y solo puede cambiar estados (con "Deshacer"). No puede tocar precios, fotos, textos, plano, ni ver el panel.
+4. Sus cambios quedan en *Actividad* con su correo. El acceso se quita con **Quitar acceso** (efecto inmediato).
+5. Si el dueño pierde su celular o contraseña: *Quitar acceso* y enviarle un enlace nuevo.
+
 ## Formulario "Publica tu proyecto"
 
 Cada solicitud se **guarda en el servidor** (D1, tabla `leads`) y aparece en el panel → botón **Solicitudes** (con contador de nuevas). Desde ahí: escribirle por WhatsApp con un saludo listo, copiar sus datos, agregar notas internas y marcarla como *contactada* o *archivada*. Quien llena el formulario ve "¡Solicitud recibida!" solo si quedó guardada, y tiene la opción adicional de escribir por WhatsApp.

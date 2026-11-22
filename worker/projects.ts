@@ -407,6 +407,8 @@ export async function projectsAdmin(env: Env, req: Request, path: string, ip: st
       db.prepare('DELETE FROM gallery WHERE project = ?').bind(slug),
       db.prepare('DELETE FROM lot_overrides WHERE project = ?').bind(slug),
       db.prepare('DELETE FROM project_flags WHERE project = ?').bind(slug),
+      db.prepare('DELETE FROM owner_projects WHERE project = ?').bind(slug),
+      db.prepare('DELETE FROM owner_invites WHERE project = ?').bind(slug),
     ];
     if (row?.source === 'panel') stmts.push(db.prepare('DELETE FROM projects WHERE slug = ?').bind(slug));
     else if (row)

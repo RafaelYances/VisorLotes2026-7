@@ -73,6 +73,38 @@ const SCHEMA = [
    )`,
   `CREATE INDEX IF NOT EXISTS leads_ts ON leads (ts)`,
   `CREATE INDEX IF NOT EXISTS leads_ip_ts ON leads (ip, ts)`,
+  `CREATE TABLE IF NOT EXISTS owners (
+     id TEXT PRIMARY KEY,
+     email TEXT NOT NULL UNIQUE,
+     name TEXT NOT NULL DEFAULT '',
+     pass TEXT NOT NULL,
+     totp TEXT NOT NULL,
+     totp_last INTEGER NOT NULL DEFAULT 0,
+     created_at INTEGER NOT NULL,
+     last_login INTEGER
+   )`,
+  `CREATE TABLE IF NOT EXISTS owner_projects (
+     owner_id TEXT NOT NULL,
+     project TEXT NOT NULL,
+     created_at INTEGER NOT NULL,
+     PRIMARY KEY (owner_id, project)
+   )`,
+  `CREATE TABLE IF NOT EXISTS owner_invites (
+     id TEXT PRIMARY KEY,
+     token_hash TEXT NOT NULL UNIQUE,
+     project TEXT NOT NULL,
+     created_at INTEGER NOT NULL,
+     expires_at INTEGER NOT NULL,
+     used_at INTEGER,
+     used_by TEXT
+   )`,
+  `CREATE TABLE IF NOT EXISTS owner_sessions (
+     token_hash TEXT PRIMARY KEY,
+     owner_id TEXT NOT NULL,
+     created_at INTEGER NOT NULL,
+     expires_at INTEGER NOT NULL,
+     ip TEXT
+   )`,
   `CREATE TABLE IF NOT EXISTS audit (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      ts INTEGER NOT NULL,

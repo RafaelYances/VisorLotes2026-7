@@ -539,6 +539,10 @@ const ACTION: Record<string, string> = {
   project_delete: 'Proyecto eliminado',
   stepup_failed: 'Doble autorización fallida',
   lead_status: 'Solicitud actualizada',
+  owner_lots: 'Cambio de lotes (dueño)',
+  owner_invite: 'Invitación a dueño creada',
+  owner_joined: 'Dueño aceptó la invitación',
+  owner_revoke: 'Acceso de dueño retirado',
   lead_delete: 'Solicitud eliminada',
   password_change: 'Contraseña cambiada',
   lots: 'Cambio de lotes',
@@ -566,10 +570,12 @@ function AuditList({ onError, onLogoutAll }: { onError: (e: unknown) => void; on
           let detail = '';
           try {
             const d = JSON.parse(it.detail);
-            if (Array.isArray(d))
-              detail = d
-                .map((c: LotChange) => `${c.lot} → ${STATUS[c.status]?.label ?? c.status}${c.price ? ` ($${num(c.price)})` : ''}`)
+            const list: LotChange[] | null = Array.isArray(d) ? d : Array.isArray(d?.changes) ? d.changes : null;
+            if (list)
+              detail = list
+                .map((c) => `${c.lot} → ${STATUS[c.status]?.label ?? c.status}${c.price ? ` ($${num(c.price)})` : ''}`)
                 .join(', ');
+            if (d?.by) detail = `${d.by}${detail ? ': ' + detail : ''}`;
           } catch {
             /* sin detalle */
           }

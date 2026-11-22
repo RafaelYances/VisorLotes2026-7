@@ -1,6 +1,21 @@
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Eye, EyeOff, FileUp, ImageUp, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  FileUp,
+  ImageUp,
+  Loader2,
+  Plus,
+  Save,
+  Trash2,
+  UserCog,
+  X,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SITE } from '../config';
 import { asset } from '../lib/data';
@@ -603,6 +618,8 @@ export function ProjectEditor({
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Guardar cambios
       </button>
 
+      <OwnerAccess slug={slug} projectName={data.name} onError={onError} notify={notify} />
+
       {/* Plano */}
       <div className="mt-6 space-y-3 rounded-2xl p-4 ring-1 ring-slate-200">
         <div className="flex items-center justify-between">
@@ -831,5 +848,151 @@ export function NewProjectWizard({
       )}
     </AnimatePresence>,
     document.body,
+  );
+}
+
+// ------------------------------------------------------------------ acceso del dueño
+
+function OwnerAccess({
+  slug,
+  projectName,
+  onError,
+  notify,
+}: {
+  slug: string;
+  projectName: string;
+  onError: (e: unknown) => void;
+  notify: (ok: boolean, msg: string) => void;
+}) {
+  const [data, setData] = useState<Awaited<ReturnType<typeof adminApi.owners>> | null>(null);
+  const [link, setLink] = useState<{ url: string; expires: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(() => adminApi.owners(slug).then(setData).catch(onError), [slug, onError]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function invite() {
+    setBusy(true);
+    try {
+      const r = await adminApi.inviteOwner(slug);
+      setLink({ url: r.link, expires: r.expires });
+      load();
+    } catch (e) {
+      onError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const message = link
+    ? `Hola, este es tu acceso para actualizar el estado de los lotes de ${projectName} en ${SITE.name}. Ábrelo y crea tu cuenta (es de un solo uso y vence el ${new Date(link.expires).toLocaleDateString('es-CO')}):\n${link.url}`
+    : '';
+
+  return (
+    <div className="mt-6 space-y-3 rounded-2xl p-4 ring-1 ring-slate-200">
+      <div>
+        <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+          <UserCog className="text-brand-600 size-4" /> Acceso del dueño del proyecto
+        </h3>
+        <p className="mt-1 text-xs text-slate-500">
+          El dueño entra por <b>/dueno</b> y <b>solo</b> puede cambiar el estado de los lotes (disponible, reservado, vendido). No puede
+          cambiar precios, fotos, textos ni el plano.
+        </p>
+      </div>
+
+      {data?.owners.map((o) => (
+        <div key={o.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+          <div className="min-w-0 flex-1 text-sm">
+            <div className="font-bold text-slate-900">{o.name || o.email}</div>
+            <div className="truncate text-xs text-slate-500">
+              {o.email} · {o.last_login ? `último ingreso ${new Date(o.last_login).toLocaleDateString('es-CO')}` : 'aún no ingresa'}
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              if (!confirm(`¿Quitar el acceso de ${o.email} a "${projectName}"? Dejará de poder cambiar estados de inmediato.`)) return;
+              try {
+                await adminApi.revokeOwner(o.id, slug);
+                notify(true, 'Acceso retirado');
+                load();
+              } catch (e) {
+                onError(e);
+              }
+            }}
+            className="h-9 shrink-0 rounded-lg px-3 text-xs font-bold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50"
+          >
+            Quitar acceso
+          </button>
+        </div>
+      ))}
+      {data && data.owners.length === 0 && <p className="text-xs text-slate-500">Ningún dueño tiene acceso todavía.</p>}
+
+      {data && data.invites.length > 0 && (
+        <div className="space-y-1">
+          {data.invites.map((i) => (
+            <div
+              key={i.id}
+              className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200"
+            >
+              <span>Invitación pendiente · vence el {new Date(i.expires_at).toLocaleDateString('es-CO')}</span>
+              <button
+                onClick={async () => {
+                  try {
+                    await adminApi.cancelInvite(i.id);
+                    if (link) setLink(null);
+                    load();
+                  } catch (e) {
+                    onError(e);
+                  }
+                }}
+                className="font-bold underline"
+              >
+                Anular
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {link ? (
+        <div className="bg-brand-50 ring-brand-200 space-y-2 rounded-xl p-3 ring-1">
+          <p className="text-brand-900 text-xs font-bold">
+            Enlace de invitación (de un solo uso, vence en 7 días). Cópialo ahora: por seguridad no se vuelve a mostrar.
+          </p>
+          <code className="block rounded-lg bg-white p-2 text-[11px] break-all text-slate-700 select-all">{link.url}</code>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+              target="_blank"
+              rel="noopener"
+              className="bg-brand-600 hover:bg-brand-700 inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-bold text-white"
+            >
+              Enviar por WhatsApp
+            </a>
+            <button
+              onClick={async () => {
+                await navigator.clipboard.writeText(message);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+            >
+              {copied ? 'Copiado ✔' : 'Copiar mensaje'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          disabled={busy}
+          onClick={invite}
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-slate-800 ring-1 ring-slate-200 hover:ring-slate-300 disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Crear enlace de invitación
+        </button>
+      )}
+    </div>
   );
 }
