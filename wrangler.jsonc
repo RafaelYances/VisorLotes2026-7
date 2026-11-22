@@ -9,7 +9,7 @@
     // Rutas como /proyecto/... se resuelven en la app
     "not_found_handling": "single-page-application",
     // Solo /api/* pasa por el Worker; el resto lo sirve Cloudflare directamente
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/files/*"]
   },
   "d1_databases": [
     {
@@ -17,6 +17,14 @@
       // Sin "database_id": Wrangler crea la base de datos automáticamente en la primera publicación
       // y la reutiliza después. Si prefieres crearla a mano, pega aquí su ID.
       "database_name": "visorlotes"
+    }
+  ],
+  "r2_buckets": [
+    {
+      // Fotos y videos subidos desde el panel. Se crea sola en la primera publicación
+      // (requiere tener R2 activado en la cuenta de Cloudflare).
+      "binding": "MEDIA",
+      "bucket_name": "visorlotes-media"
     }
   ],
   "observability": { "enabled": true }

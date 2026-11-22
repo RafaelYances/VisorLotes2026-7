@@ -1,4 +1,4 @@
-import { CheckSquare, ExternalLink, History, Loader2, LogOut, Search, Square, Tag, X } from 'lucide-react';
+import { CheckSquare, ExternalLink, History, Images, Loader2, LogOut, Search, Square, Tag, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -9,6 +9,7 @@ import { cx, m2, num, price } from '../lib/format';
 import type { LotStatus, Project, ProjectCard } from '../types';
 import { MapView, type MapHandle } from '../viewer/MapView';
 import { adminApi, ApiError, type AuditItem, type LotChange } from './api';
+import { GalleryManager } from './GalleryManager';
 
 const STATUSES: LotStatus[] = ['available', 'reserved', 'sold'];
 
@@ -24,7 +25,7 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<LotStatus | 'all'>('all');
   const [q, setQ] = useState('');
-  const [tab, setTab] = useState<'lots' | 'audit'>('lots');
+  const [tab, setTab] = useState<'lots' | 'gallery' | 'audit'>('lots');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const mapRef = useRef<MapHandle>(null);
@@ -187,6 +188,7 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
             {(
               [
                 ['lots', 'Lotes', Tag],
+                ['gallery', 'Galería', Images],
                 ['audit', 'Actividad', History],
               ] as const
             ).map(([k, label, I]) => (
@@ -206,6 +208,10 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
 
           {tab === 'audit' ? (
             <AuditList onError={handleError} onLogoutAll={() => logout(true)} />
+          ) : tab === 'gallery' ? (
+            slug ? (
+              <GalleryManager key={slug} project={slug} onError={handleError} notify={notify} />
+            ) : null
           ) : (
             <>
               {/* Resumen y filtros */}
@@ -439,6 +445,9 @@ function PriceEditor({ initial, busy, onSave }: { initial: number | null; busy: 
 
 const ACTION: Record<string, string> = {
   lots: 'Cambio de lotes',
+  gallery_add: 'Foto o video agregado',
+  gallery_update: 'Galería reordenada / editada',
+  gallery_delete: 'Foto o video eliminado',
   login: 'Ingreso al panel',
   login_failed: 'Intento de ingreso fallido',
   setup: 'Cuenta creada',

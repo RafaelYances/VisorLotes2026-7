@@ -52,6 +52,9 @@ export interface Highlight {
 }
 
 export interface GalleryItem {
+  /** id en la base de datos (si se gestiona desde el panel) */
+  id?: string;
+  cover?: boolean;
   type: 'image' | 'video';
   src: string;
   /** miniatura (fotos, o portada del video si existe) */

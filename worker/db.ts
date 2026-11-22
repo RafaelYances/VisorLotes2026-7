@@ -26,6 +26,25 @@ const SCHEMA = [
      updated_at INTEGER NOT NULL,
      PRIMARY KEY (project, lot)
    )`,
+  `CREATE TABLE IF NOT EXISTS gallery (
+     id TEXT PRIMARY KEY,
+     project TEXT NOT NULL,
+     type TEXT NOT NULL CHECK (type IN ('image', 'video')),
+     src TEXT NOT NULL,
+     thumb TEXT,
+     poster TEXT,
+     w INTEGER,
+     h INTEGER,
+     blur TEXT,
+     caption TEXT NOT NULL DEFAULT '',
+     cover INTEGER NOT NULL DEFAULT 0,
+     position INTEGER NOT NULL DEFAULT 0,
+     bytes INTEGER NOT NULL DEFAULT 0,
+     r2keys TEXT NOT NULL DEFAULT '[]',
+     created_at INTEGER NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS gallery_project ON gallery (project, position)`,
+  `CREATE TABLE IF NOT EXISTS project_flags (project TEXT NOT NULL, flag TEXT NOT NULL, PRIMARY KEY (project, flag))`,
   `CREATE TABLE IF NOT EXISTS audit (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      ts INTEGER NOT NULL,

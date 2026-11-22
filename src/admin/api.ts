@@ -1,5 +1,5 @@
 import { asset } from '../lib/data';
-import type { LotStatus } from '../types';
+import type { GalleryItem, LotStatus } from '../types';
 
 export class ApiError extends Error {
   constructor(
@@ -53,4 +53,8 @@ export const adminApi = {
   logoutAll: () => call<{ ok: true }>('logout-all', {}),
   saveLots: (project: string, changes: LotChange[]) => call<{ ok: true; updated: number }>('lots', { project, changes }),
   audit: () => call<{ items: AuditItem[] }>('audit'),
+  gallery: (project: string) => call<{ items: GalleryItem[] }>(`gallery?project=${encodeURIComponent(project)}`),
+  galleryUpdate: (project: string, changes: { order?: string[]; items?: { id: string; caption?: string; cover?: boolean }[] }) =>
+    call<{ ok: true; items: GalleryItem[] }>('gallery/update', { project, ...changes }),
+  galleryDelete: (project: string, id: string) => call<{ ok: true }>('gallery/delete', { project, id }),
 };

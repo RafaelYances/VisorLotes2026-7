@@ -20,7 +20,28 @@ interface Fetcher {
   fetch(input: Request | string, init?: RequestInit): Promise<Response>;
 }
 
+interface R2ObjectBody {
+  body: ReadableStream;
+  size: number;
+  etag: string;
+  httpEtag: string;
+  httpMetadata?: { contentType?: string };
+  range?: { offset: number; length?: number };
+}
+interface R2Bucket {
+  get(key: string, options?: { range?: { offset: number; length?: number } }): Promise<R2ObjectBody | null>;
+  head(key: string): Promise<{ size: number; httpEtag: string; httpMetadata?: { contentType?: string } } | null>;
+  put(
+    key: string,
+    value: ArrayBuffer | ReadableStream | Blob,
+    options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
+  ): Promise<unknown>;
+  delete(keys: string | string[]): Promise<void>;
+}
+
 interface Env {
+  /** Fotos y videos subidos desde el panel (Cloudflare R2). */
+  MEDIA: R2Bucket;
   ASSETS: Fetcher;
   DB: D1Database;
   /** Secreto de un solo uso para crear la cuenta de administración (Cloudflare → Variables and secrets). */

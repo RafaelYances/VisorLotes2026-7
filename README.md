@@ -53,7 +53,10 @@ El navegador **ya no lee el DXF**: el script lo convierte una sola vez en JSON (
 
 ## Panel de administración (`/admin`)
 
-Gestiona el sitio sin tocar código. Etapa 1: **estados y precios de los lotes** (con efecto inmediato en el visor).
+Gestiona el sitio sin tocar código, con efecto inmediato en el visor:
+- **Lotes:** estados y precios (individual o en grupo).
+- **Galería:** subir fotos y videos (arrastrando o desde el celular), ordenarlos, escribir sus textos, elegir la portada y eliminarlos. Las fotos se optimizan en el navegador antes de subir (WebP 1920 px + miniatura + vista previa borrosa). Videos MP4/WebM de hasta 60 MB (recomendado < 15 MB). Se guardan en **Cloudflare R2** (`visorlotes-media`, 10 GB gratis) y se sirven desde `/files/…`.
+- La primera vez que abres la galería de un proyecto en el panel, se importan las fotos de `data/projects/<slug>/galeria/`. Desde ese momento la galería del sitio es la del panel.
 
 **Seguridad del ingreso**
 - Una sola cuenta de administración, protegida con **contraseña + código de 6 dígitos** de una app autenticadora (Google Authenticator, Microsoft Authenticator…).
@@ -67,7 +70,7 @@ Gestiona el sitio sin tocar código. Etapa 1: **estados y precios de los lotes**
 2. Abre `https://tu-sitio/admin`, escribe esa frase, crea tu contraseña y escanea el código QR con tu app autenticadora.
 3. Listo: el registro queda cerrado para siempre. Puedes borrar `ADMIN_SETUP_TOKEN` si quieres.
 
-**Base de datos:** Cloudflare D1 llamada `visorlotes` (se crea sola en la primera publicación).
+**Base de datos y archivos:** Cloudflare D1 `visorlotes` y R2 `visorlotes-media` (se crean solos al publicar; R2 debe estar activado en la cuenta: *Storage & Databases → R2 → Enable*, plan Free).
 
 **En tu computador:** crea `.dev.vars` con `ADMIN_SETUP_TOKEN=...`, ejecuta `npm run build` y luego `npm run dev:api` (servidor local en <http://localhost:8787>). Para trabajar con recarga automática usa además `npm run dev` (el visor en :5173 envía `/api` al servidor local).
 

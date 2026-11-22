@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { LotStatus, Project, ProjectCard, ProjectStats } from '../types';
+import type { GalleryItem, LotStatus, Project, ProjectCard, ProjectStats } from '../types';
 
 /** Ruta a un archivo de /public respetando la subcarpeta de publicación (GitHub Pages). */
 export const asset = (p: string) => (/^(https?:)?\/\//.test(p) ? p : import.meta.env.BASE_URL + p.replace(/^\//, ''));
@@ -22,13 +22,29 @@ function load<T>(url: string): Promise<T> {
 /** Estados y precios editados desde el panel: { proyecto: { lote: [estado, precio] } } */
 export type Overrides = Record<string, Record<string, [LotStatus, number | null]>>;
 
-export async function loadOverrides(): Promise<Overrides> {
+export type GallerySummary = Record<string, { cover: ProjectCard['cover']; photos: number; videos: number }>;
+
+/** Datos en vivo del servidor (estados editados y resumen de galerías). */
+export async function loadLive(): Promise<{ overrides: Overrides; gallery: GallerySummary }> {
   try {
     const r = await fetch(asset('api/public/lots'), { cache: 'no-store' });
-    if (!r.ok) return {};
-    return ((await r.json()) as { overrides: Overrides }).overrides ?? {};
+    if (!r.ok) return { overrides: {}, gallery: {} };
+    const j = (await r.json()) as { overrides?: Overrides; gallery?: GallerySummary };
+    return { overrides: j.overrides ?? {}, gallery: j.gallery ?? {} };
   } catch {
-    return {}; // sin servidor (p. ej. vista previa local): se usan los datos publicados
+    return { overrides: {}, gallery: {} }; // sin servidor (vista previa local): datos publicados
+  }
+}
+export const loadOverrides = () => loadLive().then((l) => l.overrides);
+
+/** Galería en vivo (gestionada desde el panel) o null si aún usa la publicada. */
+export async function loadLiveGallery(slug: string): Promise<GalleryItem[] | null> {
+  try {
+    const r = await fetch(asset(`api/public/gallery/${slug}`), { cache: 'no-store' });
+    if (!r.ok) return null;
+    return ((await r.json()) as { items: GalleryItem[] | null }).items;
+  } catch {
+    return null;
   }
 }
 
@@ -64,12 +80,19 @@ function applyCard(c: ProjectCard, o: Overrides[string] = {}): ProjectCard {
 }
 
 export const loadProjects = () =>
-  Promise.all([load<ProjectCard[]>(asset('data/projects.json')), loadOverrides()]).then(([cards, o]) =>
-    cards.map((c) => applyCard(c, o[c.slug])),
+  Promise.all([load<ProjectCard[]>(asset('data/projects.json')), loadLive()]).then(([cards, live]) =>
+    cards.map((c) => {
+      const card = applyCard(c, live.overrides[c.slug]);
+      const g = live.gallery[c.slug];
+      return g ? { ...card, cover: g.cover, media: { photos: g.photos, videos: g.videos } } : card;
+    }),
   );
 export const loadProjectRaw = (slug: string) => load<Project>(asset(`data/projects/${slug}.json`));
 export const loadProject = (slug: string) =>
-  Promise.all([loadProjectRaw(slug), loadOverrides()]).then(([p, o]) => applyOverrides(p, o[slug]));
+  Promise.all([loadProjectRaw(slug), loadOverrides(), loadLiveGallery(slug)]).then(([p, o, gallery]) => {
+    const project = applyOverrides(p, o[slug]);
+    return gallery ? { ...project, gallery } : project;
+  });
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [state, setState] = useState<{ data?: T; error?: Error; loading: boolean }>({ loading: true });

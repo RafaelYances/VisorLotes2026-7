@@ -6,40 +6,11 @@
 import { clearCookie, clientIp, createSession, destroyAllSessions, destroySession, hasSession, isThrottled, recordAttempt } from './auth';
 import { hashPassword, newTotpSecret, safeEqual, verifyPassword, verifyTotp } from './crypto';
 import { audit, ensureSchema } from './db';
+import { galleryAdmin, galleryPublic, gallerySummary, serveFile } from './gallery';
+import { body, fail, json, sameOrigin } from './http';
 
-type Json = Record<string, unknown>;
 const STATUSES = new Set(['available', 'reserved', 'sold']);
 const SLUG = /^[a-z0-9-]{1,60}$/;
-
-const SECURITY_HEADERS: Record<string, string> = {
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'X-Frame-Options': 'DENY',
-};
-
-function json(data: unknown, status = 200, extra: Record<string, string> = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...SECURITY_HEADERS, ...extra },
-  });
-}
-const fail = (status: number, error: string) => json({ error }, status);
-
-/** Protección CSRF: las escrituras deben venir de esta misma página y en JSON. */
-function sameOrigin(req: Request) {
-  const origin = req.headers.get('Origin');
-  return !!origin && origin === new URL(req.url).origin && (req.headers.get('Content-Type') || '').startsWith('application/json');
-}
-
-async function body<T = Json>(req: Request): Promise<T | null> {
-  const len = Number(req.headers.get('Content-Length') || 0);
-  if (len > 200_000) return null;
-  try {
-    return (await req.json()) as T;
-  } catch {
-    return null;
-  }
-}
 
 // Ids de lotes válidos por proyecto (leídos de los datos publicados, con caché en memoria)
 const lotCache = new Map<string, { at: number; ids: Set<string> }>();
@@ -76,13 +47,17 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
       .all<{ project: string; lot: string; status: string; price: number | null }>();
     const out: Record<string, Record<string, [string, number | null]>> = {};
     for (const r of results) (out[r.project] ??= {})[r.lot] = [r.status, r.price];
-    return json({ overrides: out }, 200, { 'Cache-Control': 'public, max-age=5' });
+    return json({ overrides: out, gallery: await gallerySummary(db) }, 200, { 'Cache-Control': 'public, max-age=5' });
   }
+
+  const gm = path.match(/^\/api\/public\/gallery\/([a-z0-9-]{1,60})$/);
+  if (gm && method === 'GET') return galleryPublic(env, gm[1]);
 
   if (!path.startsWith('/api/admin/')) return fail(404, 'No encontrado');
 
   // Todas las escrituras del panel exigen mismo origen
-  if (method !== 'GET' && !sameOrigin(req)) return fail(403, 'Origen no permitido');
+  // (la subida de archivos es multipart: su origen se valida dentro de galleryAdmin)
+  if (method !== 'GET' && path !== '/api/admin/gallery/upload' && !sameOrigin(req)) return fail(403, 'Origen no permitido');
 
   // ------------------------------------------------------------ estado de sesión
   if (path === '/api/admin/session' && method === 'GET') {
@@ -200,6 +175,8 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     return json({ ok: true, updated: b.changes.length });
   }
 
+  if (path.startsWith('/api/admin/gallery')) return galleryAdmin(env, req, path, ip);
+
   if (path === '/api/admin/audit' && method === 'GET') {
     const { results } = await db.prepare('SELECT ts, action, project, detail, ip FROM audit ORDER BY id DESC LIMIT 60').all();
     return json({ items: results });
@@ -217,6 +194,14 @@ export default {
       } catch (e) {
         console.error(e);
         return fail(500, 'Error interno');
+      }
+    }
+    if (url.pathname.startsWith('/files/') && (req.method === 'GET' || req.method === 'HEAD')) {
+      try {
+        return await serveFile(env, req, decodeURIComponent(url.pathname.slice('/files/'.length)));
+      } catch (e) {
+        console.error(e);
+        return new Response('Error', { status: 500 });
       }
     }
     return env.ASSETS.fetch(req);
