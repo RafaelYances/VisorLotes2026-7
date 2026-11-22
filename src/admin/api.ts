@@ -1,6 +1,20 @@
 import { asset } from '../lib/data';
 import type { GalleryItem, Highlight, LotStatus, Project, ProjectCard } from '../types';
 
+export interface Lead {
+  id: string;
+  ts: number;
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+  location: string;
+  lots: number | null;
+  message: string;
+  status: 'new' | 'contacted' | 'archived';
+  notes: string;
+}
+
 export type AdminProjectCard = ProjectCard & { visible: boolean; source: 'static' | 'panel' };
 
 /** Datos editables de un proyecto. */
@@ -74,6 +88,10 @@ export const adminApi = {
   galleryUpdate: (project: string, changes: { order?: string[]; items?: { id: string; caption?: string; cover?: boolean }[] }) =>
     call<{ ok: true; items: GalleryItem[] }>('gallery/update', { project, ...changes }),
   galleryDelete: (project: string, id: string) => call<{ ok: true }>('gallery/delete', { project, id }),
+  leads: () => call<{ items: Lead[] }>('leads'),
+  leadsCount: () => call<{ new: number }>('leads/count'),
+  updateLead: (id: string, patch: { status?: Lead['status']; notes?: string }) => call<{ ok: true }>('leads/update', { id, ...patch }),
+  deleteLead: (id: string) => call<{ ok: true }>('leads/delete', { id }),
   projects: () => call<{ projects: AdminProjectCard[] }>('projects'),
   project: (slug: string) =>
     call<Project & { _admin: { source: 'static' | 'panel'; visible: boolean; hasPlan: boolean } }>(`project/${slug}`),

@@ -57,6 +57,22 @@ const SCHEMA = [
      updated_at INTEGER NOT NULL
    )`,
   `CREATE TABLE IF NOT EXISTS project_flags (project TEXT NOT NULL, flag TEXT NOT NULL, PRIMARY KEY (project, flag))`,
+  `CREATE TABLE IF NOT EXISTS leads (
+     id TEXT PRIMARY KEY,
+     ts INTEGER NOT NULL,
+     name TEXT NOT NULL,
+     company TEXT NOT NULL DEFAULT '',
+     phone TEXT NOT NULL,
+     email TEXT NOT NULL,
+     location TEXT NOT NULL,
+     lots INTEGER,
+     message TEXT NOT NULL DEFAULT '',
+     status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'archived')),
+     notes TEXT NOT NULL DEFAULT '',
+     ip TEXT
+   )`,
+  `CREATE INDEX IF NOT EXISTS leads_ts ON leads (ts)`,
+  `CREATE INDEX IF NOT EXISTS leads_ip_ts ON leads (ip, ts)`,
   `CREATE TABLE IF NOT EXISTS audit (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      ts INTEGER NOT NULL,

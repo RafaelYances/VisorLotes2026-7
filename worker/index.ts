@@ -8,6 +8,7 @@ import { hashPassword, newTotpSecret, safeEqual, verifyPassword, verifyTotp } fr
 import { audit, ensureSchema } from './db';
 import { galleryAdmin, galleryPublic, gallerySummary, serveFile } from './gallery';
 import { body, fail, json, sameOrigin } from './http';
+import { createLead, leadsAdmin } from './leads';
 import { guardStaticData, loadDetail, lotIds, projectsAdmin, projectsPublic } from './projects';
 
 // Rutas de subida de archivos (multipart): validan su origen por su cuenta
@@ -52,6 +53,8 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     if (!(await loadDetail(env, req, gm[1]))) return fail(404, 'No encontrado'); // oculto o inexistente
     return galleryPublic(env, gm[1]);
   }
+
+  if (path === '/api/public/leads' && method === 'POST') return createLead(env, req, ip);
 
   if (path.startsWith('/api/public/project') && method === 'GET') {
     const r = await projectsPublic(env, req, path);
@@ -204,6 +207,7 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
 
   if (path.startsWith('/api/admin/gallery')) return galleryAdmin(env, req, path, ip);
   if (path.startsWith('/api/admin/project')) return projectsAdmin(env, req, path, ip);
+  if (path.startsWith('/api/admin/leads')) return leadsAdmin(env, req, path, ip);
 
   if (path === '/api/admin/audit' && method === 'GET') {
     const { results } = await db.prepare('SELECT ts, action, project, detail, ip FROM audit ORDER BY id DESC LIMIT 60').all();

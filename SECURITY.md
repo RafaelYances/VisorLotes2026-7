@@ -38,6 +38,11 @@
 - `/admin` y `/api/` excluidos de buscadores (`robots.txt` y `X-Robots-Tag`).
 - El texto que viene de planos y del panel se muestra siempre como **texto**, nunca como HTML.
 
+### Formulario "Publica tu proyecto"
+- Solo acepta envíos desde el propio sitio, con campo trampa para bots, tiempo mínimo de llenado y límites (5 por hora por conexión, 300 por día).
+- Datos validados y con longitud máxima; se muestran en el panel siempre como texto.
+- Solo el administrador los ve (requiere sesión). Las archivadas se borran solas a los 2 años.
+
 ### Privacidad de proyectos ocultos
 - Un proyecto oculto o eliminado no aparece en la lista, su ficha y galería responden 404, y tampoco se exponen sus estados ni portada en el resumen público.
 

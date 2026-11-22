@@ -119,11 +119,9 @@ Las fotos se optimizan solas al compilar (WebP de 1920 px + miniatura de 640 px 
 
 ## Formulario "Publica tu proyecto"
 
-Sin backend: por defecto abre WhatsApp con los datos ya escritos. Si prefieres recibirlos por correo/hoja de cálculo, crea un formulario en [Formspree](https://formspree.io) o [Web3Forms](https://web3forms.com) y pon su URL en un archivo `.env`:
+Cada solicitud se **guarda en el servidor** (D1, tabla `leads`) y aparece en el panel → botón **Solicitudes** (con contador de nuevas). Desde ahí: escribirle por WhatsApp con un saludo listo, copiar sus datos, agregar notas internas y marcarla como *contactada* o *archivada*. Quien llena el formulario ve "¡Solicitud recibida!" solo si quedó guardada, y tiene la opción adicional de escribir por WhatsApp.
 
-```
-VITE_LEADS_ENDPOINT=https://formspree.io/f/xxxxxxx
-```
+Antispam: campo trampa invisible, tiempo mínimo de llenado, máx. 5 solicitudes por hora por conexión y 300 por día en total.
 
 ## Publicar en GitHub Pages (automático)
 

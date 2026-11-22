@@ -1,8 +1,10 @@
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { SITE } from '../config';
+import { asset } from '../lib/data';
 import { whatsappUrl } from '../lib/format';
+import { WhatsAppIcon } from './ui';
 
 const FIELDS = [
   { name: 'nombre', label: 'Nombre completo', type: 'text', required: true, autoComplete: 'name' },
@@ -13,37 +15,42 @@ const FIELDS = [
   { name: 'lotes', label: 'Número aproximado de lotes', type: 'number' },
 ] as const;
 
+function whatsappText(data: Record<string, string>) {
+  return [
+    '¡Hola! Quiero publicar mi proyecto en ' + SITE.name + '.',
+    ...FIELDS.filter((f) => data[f.name]).map((f) => `• ${f.label}: ${data[f.name]}`),
+    data.mensaje ? `• Mensaje: ${data.mensaje}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export function LeadForm() {
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState<Record<string, string>>({});
+  const startedAt = useRef(Date.now());
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     setState('sending');
-    if (SITE.leadsEndpoint) {
-      try {
-        const r = await fetch(SITE.leadsEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ ...data, origen: 'Publica tu proyecto' }),
-        });
-        if (!r.ok) throw new Error();
-        setState('done');
-        return;
-      } catch {
-        setState('error');
-        return;
-      }
+    setError('');
+    try {
+      const r = await fetch(asset('api/public/leads'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, elapsed: Date.now() - startedAt.current }),
+      });
+      const j = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) throw new Error(j.error || 'No pudimos registrar tu solicitud.');
+      setSent(data);
+      setState('done');
+    } catch (err) {
+      setSent(data);
+      setError(err instanceof Error && err.message !== 'Failed to fetch' ? err.message : 'No pudimos registrar tu solicitud.');
+      setState('error');
     }
-    const text = [
-      '¡Hola! Quiero publicar mi proyecto en ' + SITE.name + '.',
-      ...FIELDS.filter((f) => data[f.name]).map((f) => `• ${f.label}: ${data[f.name]}`),
-      data.mensaje ? `• Mensaje: ${data.mensaje}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    window.open(whatsappUrl(SITE.whatsapp, text), '_blank', 'noopener');
-    setState('done');
   }
 
   return (
@@ -59,11 +66,25 @@ export function LeadForm() {
             <span className="bg-brand-100 text-brand-600 grid size-16 place-items-center rounded-full">
               <CheckCircle2 className="size-9" />
             </span>
-            <h3 className="text-brand-950 text-2xl font-extrabold">¡Gracias por escribirnos!</h3>
+            <h3 className="text-brand-950 text-2xl font-extrabold">¡Solicitud recibida!</h3>
             <p className="max-w-sm text-slate-600">
-              Recibimos tus datos. Nuestro equipo te contactará muy pronto para publicar tu proyecto.
+              Guardamos tus datos. Nuestro equipo te contactará muy pronto para publicar tu proyecto.
             </p>
-            <button onClick={() => setState('idle')} className="text-brand-700 mt-2 text-sm font-semibold hover:underline">
+            <a
+              href={whatsappUrl(SITE.whatsapp, whatsappText(sent))}
+              target="_blank"
+              rel="noopener"
+              className="bg-brand-50 text-brand-700 hover:bg-brand-100 mt-1 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold"
+            >
+              <WhatsAppIcon className="size-4" /> ¿Prefieres hablar ya? Escríbenos por WhatsApp
+            </a>
+            <button
+              onClick={() => {
+                startedAt.current = Date.now();
+                setState('idle');
+              }}
+              className="mt-1 text-sm font-semibold text-slate-500 hover:underline"
+            >
               Enviar otra solicitud
             </button>
           </motion.div>
@@ -73,8 +94,17 @@ export function LeadForm() {
             onSubmit={onSubmit}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid gap-4 rounded-3xl bg-white p-6 sm:grid-cols-2 sm:p-8"
+            className="relative grid gap-4 rounded-3xl bg-white p-6 sm:grid-cols-2 sm:p-8"
           >
+            {/* Trampa para bots: invisible para personas */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden
+              className="absolute -left-[9999px] h-0 w-0 opacity-0"
+            />
             {FIELDS.map((f) => (
               <label key={f.name} className="group relative block">
                 <input
@@ -114,9 +144,17 @@ export function LeadForm() {
               </button>
             </div>
             {state === 'error' && (
-              <p className="text-sm font-medium text-rose-600 sm:col-span-2">
-                No pudimos enviar el formulario. Intenta de nuevo o escríbenos por WhatsApp.
-              </p>
+              <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200 sm:col-span-2">
+                <p className="font-semibold">{error}</p>
+                <a
+                  href={whatsappUrl(SITE.whatsapp, whatsappText(sent))}
+                  target="_blank"
+                  rel="noopener"
+                  className="mt-2 inline-flex items-center gap-2 font-bold text-rose-800 underline"
+                >
+                  <WhatsAppIcon className="size-4" /> Envíanos tus datos por WhatsApp
+                </a>
+              </div>
             )}
           </motion.form>
         )}

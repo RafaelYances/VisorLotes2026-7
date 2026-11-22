@@ -1,4 +1,4 @@
-import { Building2, CheckSquare, ExternalLink, History, Images, Loader2, LogOut, Plus, Search, Square, Tag, X } from 'lucide-react';
+import { Building2, CheckSquare, Inbox, ExternalLink, History, Images, Loader2, LogOut, Plus, Search, Square, Tag, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -9,6 +9,7 @@ import { cx, m2, num, price } from '../lib/format';
 import type { LotStatus, Project } from '../types';
 import { MapView, type MapHandle } from '../viewer/MapView';
 import { adminApi, ApiError, type AdminProjectCard, type AuditItem, type LotChange } from './api';
+import { LeadsView } from './LeadsView';
 import { NewProjectWizard, ProjectEditor } from './ProjectAdmin';
 import { GalleryManager } from './GalleryManager';
 
@@ -22,6 +23,18 @@ function parsePrice(v: string): number | null {
 export function Dashboard({ email, onLogout }: { email?: string; onLogout: () => void }) {
   const [cards, setCards] = useState<AdminProjectCard[]>([]);
   const [wizard, setWizard] = useState(false);
+  const [view, setView] = useState<'projects' | 'leads'>('projects');
+  const [newLeads, setNewLeads] = useState(0);
+  useEffect(() => {
+    const check = () =>
+      adminApi.leadsCount().then(
+        (r) => setNewLeads(r.new),
+        () => {},
+      );
+    check();
+    const t = window.setInterval(check, 60_000); // revisa cada minuto
+    return () => window.clearInterval(t);
+  }, []);
   const [slug, setSlug] = useState<string>('');
   const [project, setProject] = useState<Project | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -165,6 +178,21 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
         >
           <Plus className="size-4" /> <span className="hidden sm:inline">Nuevo proyecto</span>
         </button>
+        <button
+          onClick={() => setView((v) => (v === 'leads' ? 'projects' : 'leads'))}
+          className={cx(
+            'relative inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-bold ring-1 transition',
+            view === 'leads' ? 'bg-brand-50 text-brand-800 ring-brand-300' : 'bg-white text-slate-700 ring-slate-200 hover:ring-slate-300',
+          )}
+          title="Solicitudes de quienes quieren publicar su proyecto"
+        >
+          <Inbox className="size-4" /> <span className="hidden sm:inline">{view === 'leads' ? 'Volver a proyectos' : 'Solicitudes'}</span>
+          {newLeads > 0 && view !== 'leads' && (
+            <span className="absolute -top-1.5 -right-1.5 grid min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-extrabold text-white ring-2 ring-white">
+              {newLeads}
+            </span>
+          )}
+        </button>
         <div className="ml-auto flex items-center gap-1">
           {project && (
             <Link
@@ -186,223 +214,227 @@ export function Dashboard({ email, onLogout }: { email?: string; onLogout: () =>
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        {/* Mapa */}
-        <div className="relative h-[38vh] shrink-0 md:h-auto md:flex-1">
-          {project ? (
-            <MapView
-              ref={mapRef}
-              project={project}
-              base="satellite"
-              selectedId={single?.id ?? null}
-              visibleIds={shownIds}
-              houseFeatures={null}
-              padding={{ top: 40, right: 40, bottom: 40, left: 40 }}
-              onSelect={(id) => id && toggle(id, false)}
-            />
-          ) : (
-            <div className="grid h-full place-items-center text-slate-400">
-              <Loader2 className="size-6 animate-spin" />
-            </div>
-          )}
-        </div>
-
-        {/* Panel lateral */}
-        <aside className="flex min-h-0 flex-1 flex-col border-l border-slate-200 bg-white md:w-[460px] md:flex-none">
-          <div className="flex shrink-0 gap-5 border-b border-slate-100 px-4">
-            {(
-              [
-                ['lots', 'Lotes', Tag],
-                ['gallery', 'Galería', Images],
-                ['project', 'Proyecto', Building2],
-                ['audit', 'Actividad', History],
-              ] as const
-            ).map(([k, label, I]) => (
-              <button
-                key={k}
-                onClick={() => setTab(k)}
-                className={cx(
-                  'relative flex items-center gap-2 py-3 text-sm font-bold',
-                  tab === k ? 'text-brand-700' : 'text-slate-500 hover:text-slate-800',
-                )}
-              >
-                <I className="size-4" /> {label}
-                {tab === k && <span className="bg-brand-600 absolute inset-x-0 -bottom-px h-0.5 rounded-full" />}
-              </button>
-            ))}
+      {view === 'leads' ? (
+        <LeadsView onError={handleError} notify={notify} onCount={setNewLeads} />
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          {/* Mapa */}
+          <div className="relative h-[38vh] shrink-0 md:h-auto md:flex-1">
+            {project ? (
+              <MapView
+                ref={mapRef}
+                project={project}
+                base="satellite"
+                selectedId={single?.id ?? null}
+                visibleIds={shownIds}
+                houseFeatures={null}
+                padding={{ top: 40, right: 40, bottom: 40, left: 40 }}
+                onSelect={(id) => id && toggle(id, false)}
+              />
+            ) : (
+              <div className="grid h-full place-items-center text-slate-400">
+                <Loader2 className="size-6 animate-spin" />
+              </div>
+            )}
           </div>
 
-          {tab === 'audit' ? (
-            <AuditList onError={handleError} onLogoutAll={() => logout(true)} />
-          ) : tab === 'project' ? (
-            slug ? (
-              <ProjectEditor
-                key={slug}
-                slug={slug}
-                onError={handleError}
-                notify={notify}
-                onChanged={() => {
-                  loadList();
-                  reload(slug);
-                }}
-                onDeleted={() => {
-                  setTab('lots');
-                  setSlug('');
-                  loadList();
-                }}
-              />
-            ) : null
-          ) : tab === 'gallery' ? (
-            slug ? (
-              <GalleryManager key={slug} project={slug} onError={handleError} notify={notify} />
-            ) : null
-          ) : (
-            <>
-              {/* Resumen y filtros */}
-              <div className="shrink-0 space-y-3 border-b border-slate-100 p-4">
-                <div className="grid grid-cols-4 gap-2">
-                  <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} label="Todos" value={stats?.total} />
-                  {STATUSES.map((s) => (
-                    <FilterChip
-                      key={s}
-                      active={filter === s}
-                      onClick={() => setFilter(s)}
-                      label={STATUS[s].label + 's'}
-                      value={stats?.[s]}
-                      color={STATUS[s].color}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3">
-                  <Search className="size-4 text-slate-400" />
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Buscar: 3-4 (manzana-lote) o 3 (manzana)"
-                    className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
-                  />
-                  {q && (
-                    <button onClick={() => setQ('')} aria-label="Limpiar">
-                      <X className="size-4 text-slate-400" />
-                    </button>
+          {/* Panel lateral */}
+          <aside className="flex min-h-0 flex-1 flex-col border-l border-slate-200 bg-white md:w-[460px] md:flex-none">
+            <div className="flex shrink-0 gap-5 border-b border-slate-100 px-4">
+              {(
+                [
+                  ['lots', 'Lotes', Tag],
+                  ['gallery', 'Galería', Images],
+                  ['project', 'Proyecto', Building2],
+                  ['audit', 'Actividad', History],
+                ] as const
+              ).map(([k, label, I]) => (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  className={cx(
+                    'relative flex items-center gap-2 py-3 text-sm font-bold',
+                    tab === k ? 'text-brand-700' : 'text-slate-500 hover:text-slate-800',
                   )}
-                </div>
-              </div>
+                >
+                  <I className="size-4" /> {label}
+                  {tab === k && <span className="bg-brand-600 absolute inset-x-0 -bottom-px h-0.5 rounded-full" />}
+                </button>
+              ))}
+            </div>
 
-              {/* Tabla */}
-              <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-[11px] font-bold tracking-wider text-slate-500 uppercase">
-                    <tr>
-                      <th className="w-10 py-2 pl-4">
-                        <button
-                          onClick={() =>
-                            setSelected((s) => (shown.every((l) => s.has(l.id)) ? new Set() : new Set(shown.map((l) => l.id))))
-                          }
-                          aria-label="Seleccionar todos los visibles"
-                        >
-                          {shown.length > 0 && shown.every((l) => selected.has(l.id)) ? (
-                            <CheckSquare className="text-brand-600 size-4" />
-                          ) : (
-                            <Square className="size-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="py-2">Lote</th>
-                      <th className="py-2">Área</th>
-                      <th className="py-2">Estado</th>
-                      <th className="py-2 pr-4 text-right">Precio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shown.map((l) => {
-                      const on = selected.has(l.id);
-                      return (
-                        <tr
-                          key={l.id}
-                          onClick={(e) => {
-                            toggle(l.id, e.ctrlKey || e.metaKey);
-                            if (!(e.ctrlKey || e.metaKey)) mapRef.current?.flyToLot(l);
-                          }}
-                          className={cx('cursor-pointer border-b border-slate-100 transition', on ? 'bg-brand-50' : 'hover:bg-slate-50')}
-                        >
-                          <td className="py-2.5 pl-4" onClick={(e) => (e.stopPropagation(), toggle(l.id, true))}>
-                            {on ? <CheckSquare className="text-brand-600 size-4" /> : <Square className="size-4 text-slate-400" />}
-                          </td>
-                          <td className="py-2.5 font-semibold text-slate-800">
-                            Mz {l.manzana} · {l.numero}
-                          </td>
-                          <td className="py-2.5 text-slate-500 tabular-nums">{num(l.area)} m²</td>
-                          <td className="py-2.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                              <StatusDot status={l.status} /> {STATUS[l.status].label}
-                            </span>
-                          </td>
-                          <td className="py-2.5 pr-4 text-right text-xs font-semibold text-slate-600 tabular-nums">
-                            {price(l.price, project?.currency)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {project && shown.length === 0 && <p className="p-6 text-center text-sm text-slate-500">No hay lotes con ese filtro.</p>}
-              </div>
-
-              {/* Acciones sobre la selección */}
-              <AnimatePresence>
-                {selected.size > 0 && (
-                  <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 30, opacity: 0 }}
-                    className="shrink-0 space-y-3 border-t border-slate-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_-12px_rgb(2_44_34/0.25)]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-extrabold text-slate-900">
-                          {single ? `Lote ${single.numero} · Manzana ${single.manzana}` : `${selected.size} lotes seleccionados`}
-                        </div>
-                        {single && (
-                          <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
-                            {m2(single.area)} · <StatusBadge status={single.status} />
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => setSelected(new Set())}
-                        className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100"
-                        aria-label="Quitar selección"
-                      >
-                        <X className="size-4" />
+            {tab === 'audit' ? (
+              <AuditList onError={handleError} onLogoutAll={() => logout(true)} />
+            ) : tab === 'project' ? (
+              slug ? (
+                <ProjectEditor
+                  key={slug}
+                  slug={slug}
+                  onError={handleError}
+                  notify={notify}
+                  onChanged={() => {
+                    loadList();
+                    reload(slug);
+                  }}
+                  onDeleted={() => {
+                    setTab('lots');
+                    setSlug('');
+                    loadList();
+                  }}
+                />
+              ) : null
+            ) : tab === 'gallery' ? (
+              slug ? (
+                <GalleryManager key={slug} project={slug} onError={handleError} notify={notify} />
+              ) : null
+            ) : (
+              <>
+                {/* Resumen y filtros */}
+                <div className="shrink-0 space-y-3 border-b border-slate-100 p-4">
+                  <div className="grid grid-cols-4 gap-2">
+                    <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} label="Todos" value={stats?.total} />
+                    {STATUSES.map((s) => (
+                      <FilterChip
+                        key={s}
+                        active={filter === s}
+                        onClick={() => setFilter(s)}
+                        label={STATUS[s].label + 's'}
+                        value={stats?.[s]}
+                        color={STATUS[s].color}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3">
+                    <Search className="size-4 text-slate-400" />
+                    <input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="Buscar: 3-4 (manzana-lote) o 3 (manzana)"
+                      className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
+                    />
+                    {q && (
+                      <button onClick={() => setQ('')} aria-label="Limpiar">
+                        <X className="size-4 text-slate-400" />
                       </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {STATUSES.map((s) => (
-                        <button
-                          key={s}
-                          disabled={busy}
-                          onClick={() => setStatusFor(s)}
-                          className={cx(
-                            'flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-bold ring-1 transition disabled:opacity-50',
-                            single?.status === s
-                              ? 'text-white ring-transparent'
-                              : 'bg-white text-slate-700 ring-slate-200 hover:ring-slate-300',
+                    )}
+                  </div>
+                </div>
+
+                {/* Tabla */}
+                <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10 bg-slate-50 text-left text-[11px] font-bold tracking-wider text-slate-500 uppercase">
+                      <tr>
+                        <th className="w-10 py-2 pl-4">
+                          <button
+                            onClick={() =>
+                              setSelected((s) => (shown.every((l) => s.has(l.id)) ? new Set() : new Set(shown.map((l) => l.id))))
+                            }
+                            aria-label="Seleccionar todos los visibles"
+                          >
+                            {shown.length > 0 && shown.every((l) => selected.has(l.id)) ? (
+                              <CheckSquare className="text-brand-600 size-4" />
+                            ) : (
+                              <Square className="size-4" />
+                            )}
+                          </button>
+                        </th>
+                        <th className="py-2">Lote</th>
+                        <th className="py-2">Área</th>
+                        <th className="py-2">Estado</th>
+                        <th className="py-2 pr-4 text-right">Precio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shown.map((l) => {
+                        const on = selected.has(l.id);
+                        return (
+                          <tr
+                            key={l.id}
+                            onClick={(e) => {
+                              toggle(l.id, e.ctrlKey || e.metaKey);
+                              if (!(e.ctrlKey || e.metaKey)) mapRef.current?.flyToLot(l);
+                            }}
+                            className={cx('cursor-pointer border-b border-slate-100 transition', on ? 'bg-brand-50' : 'hover:bg-slate-50')}
+                          >
+                            <td className="py-2.5 pl-4" onClick={(e) => (e.stopPropagation(), toggle(l.id, true))}>
+                              {on ? <CheckSquare className="text-brand-600 size-4" /> : <Square className="size-4 text-slate-400" />}
+                            </td>
+                            <td className="py-2.5 font-semibold text-slate-800">
+                              Mz {l.manzana} · {l.numero}
+                            </td>
+                            <td className="py-2.5 text-slate-500 tabular-nums">{num(l.area)} m²</td>
+                            <td className="py-2.5">
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                                <StatusDot status={l.status} /> {STATUS[l.status].label}
+                              </span>
+                            </td>
+                            <td className="py-2.5 pr-4 text-right text-xs font-semibold text-slate-600 tabular-nums">
+                              {price(l.price, project?.currency)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {project && shown.length === 0 && <p className="p-6 text-center text-sm text-slate-500">No hay lotes con ese filtro.</p>}
+                </div>
+
+                {/* Acciones sobre la selección */}
+                <AnimatePresence>
+                  {selected.size > 0 && (
+                    <motion.div
+                      initial={{ y: 30, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: 30, opacity: 0 }}
+                      className="shrink-0 space-y-3 border-t border-slate-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_-12px_rgb(2_44_34/0.25)]"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-extrabold text-slate-900">
+                            {single ? `Lote ${single.numero} · Manzana ${single.manzana}` : `${selected.size} lotes seleccionados`}
+                          </div>
+                          {single && (
+                            <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                              {m2(single.area)} · <StatusBadge status={single.status} />
+                            </div>
                           )}
-                          style={single?.status === s ? { background: STATUS[s].color } : undefined}
+                        </div>
+                        <button
+                          onClick={() => setSelected(new Set())}
+                          className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100"
+                          aria-label="Quitar selección"
                         >
-                          <StatusDot status={s} className={single?.status === s ? 'bg-white!' : ''} /> {STATUS[s].label}
+                          <X className="size-4" />
                         </button>
-                      ))}
-                    </div>
-                    <PriceEditor key={single?.id ?? 'multi'} initial={single?.price ?? null} busy={busy} onSave={setPriceFor} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </>
-          )}
-        </aside>
-      </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {STATUSES.map((s) => (
+                          <button
+                            key={s}
+                            disabled={busy}
+                            onClick={() => setStatusFor(s)}
+                            className={cx(
+                              'flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-bold ring-1 transition disabled:opacity-50',
+                              single?.status === s
+                                ? 'text-white ring-transparent'
+                                : 'bg-white text-slate-700 ring-slate-200 hover:ring-slate-300',
+                            )}
+                            style={single?.status === s ? { background: STATUS[s].color } : undefined}
+                          >
+                            <StatusDot status={s} className={single?.status === s ? 'bg-white!' : ''} /> {STATUS[s].label}
+                          </button>
+                        ))}
+                      </div>
+                      <PriceEditor key={single?.id ?? 'multi'} initial={single?.price ?? null} busy={busy} onSave={setPriceFor} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
+          </aside>
+        </div>
+      )}
 
       <NewProjectWizard
         open={wizard}
@@ -506,6 +538,8 @@ const ACTION: Record<string, string> = {
   project_hide: 'Proyecto ocultado',
   project_delete: 'Proyecto eliminado',
   stepup_failed: 'Doble autorización fallida',
+  lead_status: 'Solicitud actualizada',
+  lead_delete: 'Solicitud eliminada',
   password_change: 'Contraseña cambiada',
   lots: 'Cambio de lotes',
   gallery_add: 'Foto o video agregado',
