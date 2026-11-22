@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Paleta de marca: verde profundo + esmeralda + blanco */
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
+
+  --color-available: #10b981;
+  --color-reserved: #f59e0b;
+  --color-sold: #ef4444;
+
+  --shadow-soft: 0 10px 40px -12px rgb(2 44 34 / 0.25);
+  --shadow-glow: 0 0 0 1px rgb(16 185 129 / 0.25), 0 12px 40px -8px rgb(16 185 129 / 0.45);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-white font-sans text-slate-800 antialiased;
+  }
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+}
+
+@utility glass {
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid rgb(255 255 255 / 0.6);
+}
+@utility glass-dark {
+  background: rgb(2 44 34 / 0.62);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+@utility text-gradient {
+  background: linear-gradient(100deg, #6ee7b7 0%, #10b981 45%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(16 185 129 / 0.35) transparent;
+}
+@utility skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* MapLibre: ajustes visuales */
+.maplibregl-ctrl-attrib {
+  @apply !rounded-tl-lg !bg-white/70 !text-[10px] backdrop-blur;
+}
+.maplibregl-ctrl-scale {
+  @apply !border-brand-700 !text-brand-900 !rounded-md !bg-white/80 !text-[10px] !font-semibold;
+}
+.maplibregl-canvas {
+  outline: none;
+}

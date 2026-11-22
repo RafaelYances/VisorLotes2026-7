@@ -1,0 +1,37 @@
+{
+  "name": "Mirador Troncal",
+  "tagline": "Lotes amplios sobre la Troncal del Caribe",
+  "description": "Proyecto de ejemplo construido con el plano VISOR.dxf. Cambia el nombre, la descripción y los datos en data/projects/mirador-troncal/project.json.",
+  "status": "proximamente",
+  "location": {
+    "city": "San Bernardo del Viento",
+    "region": "Córdoba, Colombia"
+  },
+  "contact": {
+    "whatsapp": "573044130405",
+    "phoneLabel": "+57 304 413 0405"
+  },
+  "currency": "COP",
+  "highlights": [
+    {
+      "icon": "road",
+      "title": "Frente a la Troncal",
+      "text": "Acceso inmediato a la vía principal"
+    },
+    {
+      "icon": "layers",
+      "title": "2 manzanas",
+      "text": "Lotes de gran formato"
+    }
+  ],
+  "setbacks": {
+    "front": 2,
+    "back": 1,
+    "side": 1
+  },
+  "cad": {
+    "crs": "utm",
+    "zone": 18,
+    "hemisphere": "north"
+  }
+}

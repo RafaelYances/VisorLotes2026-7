@@ -1,18 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Lotes</title>
-    <script>
-        var ua = navigator.userAgent || navigator.vendor || window.opera || "";
-        var isMobileUA = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone|Mobile/i.test(ua);
-        var isMobileWidth = window.innerWidth <= 768;
-        var isMobile = isMobileUA || isMobileWidth;
-
-        window.location.href = isMobile ? "movil.html" : "escritorio.html";
-    </script>
-</head>
-<body>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#064e3b" />
+    <meta name="description" content="Explora proyectos de lotes en un mapa satelital interactivo: medidas reales, disponibilidad en tiempo real y diseños de casa que caben en cada lote." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>VisorLotes · Encuentra tu lote ideal</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

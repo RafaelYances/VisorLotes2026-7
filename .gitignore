@@ -1,0 +1,9 @@
+node_modules
+dist
+public/data
+.DS_Store
+*.local
+.env
+*.bak
+*.dwl
+*.dwl2
