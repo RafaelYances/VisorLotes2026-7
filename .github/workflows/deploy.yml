@@ -1,8 +1,8 @@
 name: Publicar en GitHub Pages
 
+# Solo manual: GitHub Pages requiere repositorio público (o plan de pago).
+# Para activarlo en cada push, agrega:  push: { branches: [main] }
 on:
-  push:
-    branches: [main, claude/hopeful-goldberg-ub70dn]
   workflow_dispatch:
 
 permissions:

@@ -80,10 +80,10 @@ VITE_LEADS_ENDPOINT=https://formspree.io/f/xxxxxxx
 
 ## Publicar en GitHub Pages (automático)
 
-El workflow `.github/workflows/deploy.yml` compila y publica el sitio en cada push.
+El workflow `.github/workflows/deploy.yml` compila y publica el sitio (se ejecuta manualmente; GitHub Pages requiere repositorio público o plan de pago).
 
 1. En GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions** (solo la primera vez).
-2. Haz push (o en la pestaña **Actions** ejecuta "Publicar en GitHub Pages").
+2. En la pestaña **Actions** ejecuta "Publicar en GitHub Pages" → **Run workflow**.
 3. El sitio queda en `https://<usuario>.github.io/<repositorio>/`.
 
 ## Publicar en otro hosting
