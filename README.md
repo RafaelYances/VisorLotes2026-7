@@ -78,7 +78,15 @@ Sin backend: por defecto abre WhatsApp con los datos ya escritos. Si prefieres r
 VITE_LEADS_ENDPOINT=https://formspree.io/f/xxxxxxx
 ```
 
-## Publicar en internet
+## Publicar en GitHub Pages (automático)
+
+El workflow `.github/workflows/deploy.yml` compila y publica el sitio en cada push.
+
+1. En GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions** (solo la primera vez).
+2. Haz push (o en la pestaña **Actions** ejecuta "Publicar en GitHub Pages").
+3. El sitio queda en `https://<usuario>.github.io/<repositorio>/`.
+
+## Publicar en otro hosting
 
 Es un sitio estático (`npm run build` → carpeta `dist/`). Funciona tal cual en **Vercel** o **Netlify** (ya incluye `vercel.json` y `public/_redirects` para las rutas `/proyecto/...`).
 

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Project, ProjectCard } from '../types';
 
+/** Ruta a un archivo de /public respetando la subcarpeta de publicación (GitHub Pages). */
+export const asset = (p: string) => (/^(https?:)?\/\//.test(p) ? p : import.meta.env.BASE_URL + p.replace(/^\//, ''));
+
 const cache = new Map<string, Promise<unknown>>();
 
 function load<T>(url: string): Promise<T> {
@@ -16,8 +19,8 @@ function load<T>(url: string): Promise<T> {
   return cache.get(url) as Promise<T>;
 }
 
-export const loadProjects = () => load<ProjectCard[]>('/data/projects.json');
-export const loadProject = (slug: string) => load<Project>(`/data/projects/${slug}.json`);
+export const loadProjects = () => load<ProjectCard[]>(asset('data/projects.json'));
+export const loadProject = (slug: string) => load<Project>(asset(`data/projects/${slug}.json`));
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [state, setState] = useState<{ data?: T; error?: Error; loading: boolean }>({ loading: true });

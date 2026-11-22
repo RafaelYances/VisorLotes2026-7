@@ -2,6 +2,7 @@ import { Heart, MapPin, Waves } from 'lucide-react';
 import { motion } from 'motion/react';
 import { HighlightIcon, StatusDot, WhatsAppIcon } from '../components/ui';
 import { STATUS } from '../config';
+import { asset } from '../lib/data';
 import { cx, ha, m2, num, whatsappUrl } from '../lib/format';
 import type { Lot, LotStatus, Project } from '../types';
 
@@ -26,7 +27,7 @@ export function ProjectOverview({ project, visible, favorites, onSelect, onPoi }
         <div className="from-brand-950 via-brand-900 to-brand-700 relative overflow-hidden bg-gradient-to-br px-5 pt-6 pb-6 text-white">
           <div className="bg-brand-400/25 absolute -top-12 -right-12 size-48 rounded-full blur-3xl" />
           {project.logo ? (
-            <img src={project.logo} alt={project.name} className="relative h-16 w-auto drop-shadow-xl" />
+            <img src={asset(project.logo)} alt={project.name} className="relative h-16 w-auto drop-shadow-xl" />
           ) : (
             <h1 className="relative text-2xl font-extrabold">{project.name}</h1>
           )}

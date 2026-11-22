@@ -8,7 +8,7 @@ const ProjectPage = lazy(() => import('./pages/ProjectPage'));
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Suspense fallback={<FullLoader />}>
         <Routes>
           <Route path="/" element={<Home />} />

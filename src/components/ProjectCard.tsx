@@ -2,6 +2,7 @@ import { ArrowUpRight, MapPin, Ruler } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { PROJECT_STATUS } from '../config';
+import { asset } from '../lib/data';
 import { m2, num } from '../lib/format';
 import type { ProjectCard as Card } from '../types';
 import { LotsPreview } from './LotsPreview';
@@ -26,7 +27,9 @@ export function ProjectCard({ project, index }: { project: Card; index: number }
           preview={project.preview}
           className="absolute inset-0 h-full w-full p-6 transition-transform duration-700 ease-out group-hover:scale-[1.06] group-hover:-rotate-1"
         />
-        {project.logo && <img src={project.logo} alt="" className="absolute bottom-4 left-4 h-11 w-auto drop-shadow-lg" loading="lazy" />}
+        {project.logo && (
+          <img src={asset(project.logo)} alt="" className="absolute bottom-4 left-4 h-11 w-auto drop-shadow-lg" loading="lazy" />
+        )}
         <span className={`absolute top-4 left-4 rounded-full px-3 py-1 text-xs font-bold shadow-lg ${st.className}`}>{st.label}</span>
         <span className="group-hover:text-brand-700 absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-white/15 text-white backdrop-blur transition-all duration-300 group-hover:bg-white">
           <ArrowUpRight className="size-5 transition-transform duration-300 group-hover:rotate-45" />
