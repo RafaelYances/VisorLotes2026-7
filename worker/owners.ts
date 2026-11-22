@@ -1,35 +1,79 @@
 /**
  * Portal de dueños de proyecto (/dueno).
+ * El administrador crea el acceso (usuario + contraseña generada) y puede volver a verla.
  * Un dueño SOLO puede cambiar el estado (disponible / reservado / vendido) de los lotes
- * de los proyectos que el administrador le asignó mediante un enlace de invitación.
- * Cuenta propia con contraseña + código TOTP, sesión y cookie separadas del administrador.
+ * de los proyectos asignados. Sesión y cookie separadas del administrador.
+ *
+ * Contraseñas: se guarda un hash (PBKDF2) para validar el ingreso y una copia cifrada
+ * (AES-GCM) para que el administrador pueda consultarla desde el panel.
  */
 import { clientIp, isThrottled, readCookie, recordAttempt } from './auth';
-import { hashPassword, newTotpSecret, randomToken, sha256, verifyPassword, verifyTotp } from './crypto';
+import { b64, hashPassword, randomBytes, randomToken, sha256, unb64, verifyPassword } from './crypto';
 import { audit } from './db';
 import { body, fail, json, sameOrigin } from './http';
 import { loadDetail } from './projects';
 
 const COOKIE = '__Host-vl_owner';
 const SESSION_HOURS = 12;
-const INVITE_DAYS = 7;
 const SLUG = /^[a-z0-9-]{1,60}$/;
+const ID = /^[a-f0-9-]{36}$/;
+const USERNAME = /^[a-z0-9][a-z0-9._-]{2,39}$/;
 const STATUSES = new Set(['available', 'reserved', 'sold']);
-// Hash ficticio para que un correo inexistente tarde lo mismo que uno real (no revela qué correos existen)
+// Hash ficticio: un usuario inexistente tarda lo mismo que uno real (no revela qué usuarios existen)
 const DUMMY_HASH = 'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 
-interface Owner {
+interface Account {
   id: string;
-  email: string;
+  username: string;
   name: string;
-  pass: string;
-  totp: string;
-  totp_last: number;
+  pass_hash: string;
+  pass_enc: string;
 }
 
-const validEmail = (e: string) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(e);
-const strongPassword = (p: string) => p.length >= 10 && p.length <= 200 && /[a-zA-Z]/.test(p) && /\d/.test(p);
-const throttleKey = (ip: string) => `owner:${ip}`;
+const ipKey = (ip: string) => `owner-ip:${ip}`;
+const userKey = (u: string) => `owner-user:${u}`;
+
+// ------------------------------------------------------------------ contraseñas
+
+/** Contraseña aleatoria legible: 12 caracteres sin letras confusas (ej. k7Pm-4xQa-9tRw). */
+function generatePassword() {
+  const A = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(12);
+  const chars = [...bytes].map((x) => A[x % A.length]).join('');
+  return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8, 12)}`;
+}
+
+/** Llave de cifrado (se genera una sola vez y queda en la base de datos). */
+let keyPromise: Promise<CryptoKey> | null = null;
+function cryptoKey(db: D1Database) {
+  keyPromise ??= (async () => {
+    let row = await db.prepare("SELECT value FROM app_keys WHERE name = 'owner_pass'").first<{ value: string }>();
+    if (!row) {
+      await db
+        .prepare("INSERT OR IGNORE INTO app_keys (name, value) VALUES ('owner_pass', ?)")
+        .bind(b64(randomBytes(32)))
+        .run();
+      row = await db.prepare("SELECT value FROM app_keys WHERE name = 'owner_pass'").first<{ value: string }>();
+    }
+    return crypto.subtle.importKey('raw', unb64(row!.value), 'AES-GCM', false, ['encrypt', 'decrypt']);
+  })().catch((e) => {
+    keyPromise = null;
+    throw e;
+  });
+  return keyPromise;
+}
+
+async function encrypt(db: D1Database, text: string) {
+  const iv = randomBytes(12);
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await cryptoKey(db), new TextEncoder().encode(text));
+  return `${b64(iv)}.${b64(data)}`;
+}
+
+async function decrypt(db: D1Database, enc: string) {
+  const [iv, data] = enc.split('.');
+  const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await cryptoKey(db), unb64(data));
+  return new TextDecoder().decode(out);
+}
 
 // ------------------------------------------------------------------ sesiones
 
@@ -41,7 +85,7 @@ async function createOwnerSession(db: D1Database, req: Request, ownerId: string)
       .prepare('INSERT INTO owner_sessions (token_hash, owner_id, created_at, expires_at, ip) VALUES (?, ?, ?, ?, ?)')
       .bind(await sha256(token), ownerId, now, now + SESSION_HOURS * 3600_000, clientIp(req)),
     db.prepare('DELETE FROM owner_sessions WHERE expires_at < ?').bind(now),
-    db.prepare('UPDATE owners SET last_login = ? WHERE id = ?').bind(now, ownerId),
+    db.prepare('UPDATE owner_accounts SET last_login = ? WHERE id = ?').bind(now, ownerId),
   ]);
   return `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${SESSION_HOURS * 3600}`;
 }
@@ -52,25 +96,15 @@ async function sessionOwner(db: D1Database, req: Request) {
   if (!token || token.length < 20) return null;
   return db
     .prepare(
-      'SELECT o.id, o.email, o.name FROM owner_sessions s JOIN owners o ON o.id = s.owner_id WHERE s.token_hash = ? AND s.expires_at > ?',
+      'SELECT a.id, a.username, a.name FROM owner_sessions s JOIN owner_accounts a ON a.id = s.owner_id WHERE s.token_hash = ? AND s.expires_at > ?',
     )
     .bind(await sha256(token), Date.now())
-    .first<{ id: string; email: string; name: string }>();
+    .first<{ id: string; username: string; name: string }>();
 }
 
 async function ownerProjects(db: D1Database, ownerId: string) {
   const { results } = await db.prepare('SELECT project FROM owner_projects WHERE owner_id = ?').bind(ownerId).all<{ project: string }>();
   return results.map((r) => r.project);
-}
-
-async function findInvite(db: D1Database, token: unknown) {
-  if (typeof token !== 'string' || token.length < 30 || token.length > 100) return null;
-  const inv = await db
-    .prepare('SELECT id, project, expires_at, used_at FROM owner_invites WHERE token_hash = ?')
-    .bind(await sha256(token))
-    .first<{ id: string; project: string; expires_at: number; used_at: number | null }>();
-  if (!inv || inv.used_at || inv.expires_at < Date.now()) return null;
-  return inv;
 }
 
 // ------------------------------------------------------------------ rutas del dueño
@@ -82,112 +116,28 @@ export async function ownerApi(env: Env, req: Request, path: string): Promise<Re
 
   if (path === '/api/owner/session' && req.method === 'GET') {
     const o = await sessionOwner(db, req);
-    return json({ authenticated: !!o, email: o?.email, name: o?.name });
+    return json({ authenticated: !!o, username: o?.username, name: o?.name });
   }
 
-  // --- Invitación: revisar, iniciar y aceptar
-  if (path === '/api/owner/invite/check' && req.method === 'POST') {
-    if (await isThrottled(db, throttleKey(ip))) return fail(429, 'Demasiados intentos. Espera 15 minutos.');
-    const b = await body<{ token?: string }>(req);
-    const inv = await findInvite(db, b?.token);
-    if (!inv) {
-      await recordAttempt(db, throttleKey(ip), false);
-      return fail(404, 'Este enlace no es válido, ya se usó o venció. Pide uno nuevo al administrador.');
-    }
-    const d = await loadDetail(env, req, inv.project, true);
-    return json({ project: (d?.name as string) ?? inv.project, expires: inv.expires_at });
-  }
-
-  if (path === '/api/owner/invite/start' && req.method === 'POST') {
-    const b = await body<{ token?: string }>(req);
-    if (!(await findInvite(db, b?.token))) return fail(404, 'Enlace no válido');
-    const secret = newTotpSecret();
-    const host = new URL(req.url).hostname;
-    const otpauth = `otpauth://totp/${encodeURIComponent(`Lotes del Caribe - Dueño (${host})`)}?secret=${secret}&issuer=${encodeURIComponent('Lotes del Caribe')}&digits=6&period=30`;
-    return json({ secret, otpauth });
-  }
-
-  if (path === '/api/owner/invite/accept' && req.method === 'POST') {
-    if (await isThrottled(db, throttleKey(ip))) return fail(429, 'Demasiados intentos. Espera 15 minutos.');
-    const b = await body<{
-      token?: string;
-      mode?: string;
-      name?: string;
-      email?: string;
-      password?: string;
-      secret?: string;
-      code?: string;
-    }>(req);
-    const inv = await findInvite(db, b?.token);
-    if (!b || !inv) return fail(404, 'Este enlace no es válido, ya se usó o venció.');
-    const email = String(b.email ?? '')
-      .trim()
-      .toLowerCase();
-    if (!validEmail(email)) return fail(400, 'Correo no válido');
-    const code = String(b.code ?? '').replace(/\s/g, '');
-    let ownerId: string;
-
-    if (b.mode === 'existing') {
-      // Ya tiene cuenta: debe demostrarlo con contraseña + código
-      const o = await db.prepare('SELECT * FROM owners WHERE email = ?').bind(email).first<Owner>();
-      const passOk = await verifyPassword(String(b.password ?? ''), o?.pass ?? DUMMY_HASH);
-      const step = o && passOk ? await verifyTotp(o.totp, code, o.totp_last) : null;
-      if (!o || !passOk || step == null) {
-        await recordAttempt(db, throttleKey(ip), false);
-        return fail(401, 'Correo, contraseña o código incorrectos');
-      }
-      await db.prepare('UPDATE owners SET totp_last = ? WHERE id = ?').bind(step, o.id).run();
-      ownerId = o.id;
-    } else {
-      if (await db.prepare('SELECT 1 FROM owners WHERE email = ?').bind(email).first())
-        return fail(409, 'Ya existe una cuenta con ese correo. Elige "Ya tengo cuenta".');
-      const name = String(b.name ?? '')
-        .trim()
-        .slice(0, 80);
-      if (!name) return fail(400, 'Escribe tu nombre');
-      if (!strongPassword(String(b.password ?? '')))
-        return fail(400, 'La contraseña debe tener al menos 10 caracteres, con letras y números');
-      if (!/^[A-Z2-7]{32}$/.test(String(b.secret ?? ''))) return fail(400, 'Datos inválidos');
-      const step = await verifyTotp(b.secret!, code);
-      if (step == null) return fail(400, 'El código de 6 dígitos no coincide. Revisa la hora de tu celular e inténtalo de nuevo.');
-      ownerId = crypto.randomUUID();
-      await db
-        .prepare('INSERT INTO owners (id, email, name, pass, totp, totp_last, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .bind(ownerId, email, name, await hashPassword(b.password!), b.secret, step, Date.now())
-        .run();
-    }
-    // Marcar la invitación como usada (solo si nadie la usó en paralelo)
-    const used = await db
-      .prepare('UPDATE owner_invites SET used_at = ?, used_by = ? WHERE id = ? AND used_at IS NULL')
-      .bind(Date.now(), ownerId, inv.id)
-      .run();
-    if (!(used.meta as { changes?: number }).changes) return fail(409, 'Este enlace ya se usó');
-    await db
-      .prepare('INSERT OR IGNORE INTO owner_projects (owner_id, project, created_at) VALUES (?, ?, ?)')
-      .bind(ownerId, inv.project, Date.now())
-      .run();
-    await recordAttempt(db, throttleKey(ip), true);
-    await audit(db, 'owner_joined', inv.project, { by: email }, ip);
-    return json({ ok: true }, 200, { 'Set-Cookie': await createOwnerSession(db, req, ownerId) });
-  }
-
-  // --- Ingreso
   if (path === '/api/owner/login' && req.method === 'POST') {
-    if (await isThrottled(db, throttleKey(ip))) return fail(429, 'Demasiados intentos fallidos. Espera 15 minutos.');
-    const b = await body<{ email?: string; password?: string; code?: string }>(req);
-    const email = String(b?.email ?? '')
+    const b = await body<{ username?: string; password?: string }>(req);
+    const username = String(b?.username ?? '')
       .trim()
       .toLowerCase();
-    const o = validEmail(email) ? await db.prepare('SELECT * FROM owners WHERE email = ?').bind(email).first<Owner>() : null;
-    const passOk = await verifyPassword(String(b?.password ?? ''), o?.pass ?? DUMMY_HASH);
-    const step = o && passOk ? await verifyTotp(o.totp, String(b?.code ?? '').replace(/\s/g, ''), o.totp_last) : null;
-    if (!o || !passOk || step == null || (await ownerProjects(db, o.id)).length === 0) {
-      await recordAttempt(db, throttleKey(ip), false);
-      return fail(401, 'Correo, contraseña o código incorrectos');
+    // Bloqueo por conexión (5 fallos / 15 min) y por usuario (5 fallos / 15 min)
+    if ((await isThrottled(db, ipKey(ip))) || (USERNAME.test(username) && (await isThrottled(db, userKey(username)))))
+      return fail(429, 'Demasiados intentos fallidos. Espera 15 minutos.');
+    const a = USERNAME.test(username)
+      ? await db.prepare('SELECT * FROM owner_accounts WHERE username = ?').bind(username).first<Account>()
+      : null;
+    const passOk = await verifyPassword(String(b?.password ?? ''), a?.pass_hash ?? DUMMY_HASH);
+    if (!a || !passOk || (await ownerProjects(db, a.id)).length === 0) {
+      await recordAttempt(db, ipKey(ip), false);
+      if (USERNAME.test(username)) await recordAttempt(db, userKey(username), false);
+      return fail(401, 'Usuario o contraseña incorrectos');
     }
-    await db.prepare('UPDATE owners SET totp_last = ? WHERE id = ?').bind(step, o.id).run();
-    await recordAttempt(db, throttleKey(ip), true);
-    return json({ ok: true }, 200, { 'Set-Cookie': await createOwnerSession(db, req, o.id) });
+    await recordAttempt(db, ipKey(ip), true);
+    return json({ ok: true }, 200, { 'Set-Cookie': await createOwnerSession(db, req, a.id) });
   }
 
   if (path === '/api/owner/logout' && req.method === 'POST') {
@@ -225,7 +175,6 @@ export async function ownerApi(env: Env, req: Request, path: string): Promise<Re
       .all<{ lot: string; status: string }>();
     const o = new Map(results.map((r) => [r.lot, r.status]));
     const lots = ((d.lots as Record<string, unknown>[]) ?? []).map((l) => ({ ...l, status: o.get(l.id as string) ?? l.status }));
-    // Solo lo necesario para ver el mapa y los lotes
     return json({ ...d, lots, gallery: [], description: '' });
   }
 
@@ -253,27 +202,8 @@ export async function ownerApi(env: Env, req: Request, path: string): Promise<Re
           .bind(b.project, c.lot, c.status, base.get(c.lot) ?? null, now),
       ),
     );
-    await audit(db, 'owner_lots', b.project, { by: owner.email, changes: b.changes.slice(0, 50) }, ip);
+    await audit(db, 'owner_lots', b.project, { by: owner.username, changes: b.changes.slice(0, 50) }, ip);
     return json({ ok: true });
-  }
-
-  if (path === '/api/owner/password' && req.method === 'POST') {
-    if (await isThrottled(db, throttleKey(ip))) return fail(429, 'Demasiados intentos fallidos. Espera 15 minutos.');
-    const b = await body<{ current?: string; code?: string; next?: string }>(req);
-    const o = await db.prepare('SELECT * FROM owners WHERE id = ?').bind(owner.id).first<Owner>();
-    const passOk = !!o && (await verifyPassword(String(b?.current ?? ''), o.pass));
-    const step = passOk ? await verifyTotp(o!.totp, String(b?.code ?? '').replace(/\s/g, ''), o!.totp_last) : null;
-    if (!passOk || step == null) {
-      await recordAttempt(db, throttleKey(ip), false);
-      return fail(401, 'Contraseña actual o código incorrectos');
-    }
-    if (!strongPassword(String(b?.next ?? '')))
-      return fail(400, 'La nueva contraseña debe tener al menos 10 caracteres, con letras y números');
-    await db.batch([
-      db.prepare('UPDATE owners SET pass = ?, totp_last = ? WHERE id = ?').bind(await hashPassword(b!.next!), step, owner.id),
-      db.prepare('DELETE FROM owner_sessions WHERE owner_id = ?').bind(owner.id),
-    ]);
-    return json({ ok: true }, 200, { 'Set-Cookie': await createOwnerSession(db, req, owner.id) });
   }
 
   return fail(404, 'No encontrado');
@@ -289,58 +219,87 @@ export async function ownersAdmin(env: Env, req: Request, path: string, ip: stri
     if (!SLUG.test(project)) return fail(400, 'Proyecto inválido');
     const { results: owners } = await db
       .prepare(
-        'SELECT o.id, o.email, o.name, o.last_login, op.created_at AS since FROM owner_projects op JOIN owners o ON o.id = op.owner_id WHERE op.project = ? ORDER BY op.created_at',
+        'SELECT a.id, a.username, a.name, a.last_login, op.created_at AS since FROM owner_projects op JOIN owner_accounts a ON a.id = op.owner_id WHERE op.project = ? ORDER BY op.created_at',
       )
       .bind(project)
       .all();
-    const { results: invites } = await db
-      .prepare(
-        'SELECT id, created_at, expires_at FROM owner_invites WHERE project = ? AND used_at IS NULL AND expires_at > ? ORDER BY created_at DESC',
-      )
-      .bind(project, Date.now())
-      .all();
-    return json({ owners, invites });
+    const { results: all } = await db.prepare('SELECT id, username, name FROM owner_accounts ORDER BY username').all();
+    return json({ owners, accounts: all });
   }
 
   if (req.method !== 'POST') return fail(404, 'No encontrado');
 
-  if (path === '/api/admin/owners/invite') {
-    const b = await body<{ project?: string }>(req);
+  if (path === '/api/admin/owners/create') {
+    const b = await body<{ project?: string; username?: string; name?: string }>(req);
+    const username = String(b?.username ?? '')
+      .trim()
+      .toLowerCase();
+    const name = String(b?.name ?? '')
+      .trim()
+      .slice(0, 80);
     if (!b?.project || !SLUG.test(b.project) || !(await loadDetail(env, req, b.project, true))) return fail(404, 'Proyecto no encontrado');
-    const token = randomToken(32);
+    if (!USERNAME.test(username))
+      return fail(400, 'Usuario inválido: 3 a 40 caracteres, minúsculas, números, punto o guion (ej. maria.gomez)');
+    if (!name) return fail(400, 'Escribe el nombre del dueño');
+    if (await db.prepare('SELECT 1 FROM owner_accounts WHERE username = ?').bind(username).first())
+      return fail(409, 'Ese usuario ya existe');
+    const password = generatePassword();
+    const id = crypto.randomUUID();
     const now = Date.now();
-    const expires = now + INVITE_DAYS * 86400_000;
     await db.batch([
       db
-        .prepare('INSERT INTO owner_invites (id, token_hash, project, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
-        .bind(crypto.randomUUID(), await sha256(token), b.project, now, expires),
-      db.prepare('DELETE FROM owner_invites WHERE expires_at < ?').bind(now - 30 * 86400_000),
+        .prepare('INSERT INTO owner_accounts (id, username, name, pass_hash, pass_enc, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(id, username, name, await hashPassword(password), await encrypt(db, password), now),
+      db.prepare('INSERT INTO owner_projects (owner_id, project, created_at) VALUES (?, ?, ?)').bind(id, b.project, now),
     ]);
-    await audit(db, 'owner_invite', b.project, {}, ip);
-    // El enlace solo se muestra esta vez: en la base de datos se guarda su huella (hash)
-    return json({ ok: true, link: `${new URL(req.url).origin}/dueno/invitacion#${token}`, expires });
+    await audit(db, 'owner_create', b.project, { by: username }, ip);
+    return json({ ok: true, id, username, password });
   }
 
-  if (path === '/api/admin/owners/cancel-invite') {
-    const b = await body<{ id?: string }>(req);
-    if (!b?.id || !/^[a-f0-9-]{36}$/.test(b.id)) return fail(400, 'Solicitud inválida');
-    await db.prepare('DELETE FROM owner_invites WHERE id = ? AND used_at IS NULL').bind(b.id).run();
+  const b = await body<{ id?: string; ownerId?: string; project?: string }>(req);
+  const id = String(b?.id ?? b?.ownerId ?? '');
+  if (!ID.test(id)) return fail(400, 'Solicitud inválida');
+  const acc = await db.prepare('SELECT * FROM owner_accounts WHERE id = ?').bind(id).first<Account>();
+  if (!acc) return fail(404, 'Usuario no encontrado');
+
+  if (path === '/api/admin/owners/reveal') {
+    await audit(db, 'owner_reveal', null, { by: acc.username }, ip);
+    return json({ ok: true, password: await decrypt(db, acc.pass_enc) });
+  }
+
+  if (path === '/api/admin/owners/reset') {
+    const password = generatePassword();
+    await db.batch([
+      db
+        .prepare('UPDATE owner_accounts SET pass_hash = ?, pass_enc = ? WHERE id = ?')
+        .bind(await hashPassword(password), await encrypt(db, password), id),
+      db.prepare('DELETE FROM owner_sessions WHERE owner_id = ?').bind(id), // la contraseña anterior deja de servir
+    ]);
+    await audit(db, 'owner_reset', null, { by: acc.username }, ip);
+    return json({ ok: true, password });
+  }
+
+  if (path === '/api/admin/owners/link') {
+    if (!b?.project || !SLUG.test(b.project) || !(await loadDetail(env, req, b.project, true))) return fail(404, 'Proyecto no encontrado');
+    await db
+      .prepare('INSERT OR IGNORE INTO owner_projects (owner_id, project, created_at) VALUES (?, ?, ?)')
+      .bind(id, b.project, Date.now())
+      .run();
+    await audit(db, 'owner_link', b.project, { by: acc.username }, ip);
     return json({ ok: true });
   }
 
   if (path === '/api/admin/owners/revoke') {
-    const b = await body<{ ownerId?: string; project?: string }>(req);
-    if (!b?.ownerId || !/^[a-f0-9-]{36}$/.test(b.ownerId) || !b.project || !SLUG.test(b.project)) return fail(400, 'Solicitud inválida');
-    const o = await db.prepare('SELECT email FROM owners WHERE id = ?').bind(b.ownerId).first<{ email: string }>();
-    await db.prepare('DELETE FROM owner_projects WHERE owner_id = ? AND project = ?').bind(b.ownerId, b.project).run();
+    if (!b?.project || !SLUG.test(b.project)) return fail(400, 'Solicitud inválida');
+    await db.prepare('DELETE FROM owner_projects WHERE owner_id = ? AND project = ?').bind(id, b.project).run();
     // Si ya no tiene proyectos, se elimina la cuenta y sus sesiones
-    const left = await db.prepare('SELECT COUNT(*) AS n FROM owner_projects WHERE owner_id = ?').bind(b.ownerId).first<{ n: number }>();
+    const left = await db.prepare('SELECT COUNT(*) AS n FROM owner_projects WHERE owner_id = ?').bind(id).first<{ n: number }>();
     if (!left?.n)
       await db.batch([
-        db.prepare('DELETE FROM owner_sessions WHERE owner_id = ?').bind(b.ownerId),
-        db.prepare('DELETE FROM owners WHERE id = ?').bind(b.ownerId),
+        db.prepare('DELETE FROM owner_sessions WHERE owner_id = ?').bind(id),
+        db.prepare('DELETE FROM owner_accounts WHERE id = ?').bind(id),
       ]);
-    await audit(db, 'owner_revoke', b.project, { by: o?.email ?? '' }, ip);
+    await audit(db, 'owner_revoke', b.project, { by: acc.username }, ip);
     return json({ ok: true });
   }
 

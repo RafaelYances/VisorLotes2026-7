@@ -119,12 +119,12 @@ Las fotos se optimizan solas al compilar (WebP de 1920 px + miniatura de 640 px 
 
 ## Portal de dueños (`/dueno`)
 
-Para que el dueño de cada proyecto actualice **solo el estado de sus lotes** (disponible, reservado, vendido), sin depender del administrador:
-1. Panel → pestaña **Proyecto** → **Acceso del dueño** → **Crear enlace de invitación** → enviarlo por WhatsApp. El enlace es de **un solo uso** y vence en **7 días**.
-2. El dueño crea su cuenta (nombre, correo, contraseña y código de 6 dígitos con Google Authenticator) y entra por `/dueno`.
-3. Solo ve sus proyectos y solo puede cambiar estados (con "Deshacer"). No puede tocar precios, fotos, textos, plano, ni ver el panel.
-4. Sus cambios quedan en *Actividad* con su correo. El acceso se quita con **Quitar acceso** (efecto inmediato).
-5. Si el dueño pierde su celular o contraseña: *Quitar acceso* y enviarle un enlace nuevo.
+Para que el dueño de cada proyecto actualice **solo el estado de sus lotes** (disponible, reservado, vendido):
+1. Panel → pestaña **Proyecto** → **Acceso del dueño** → **Crear acceso para el dueño** (nombre + usuario). La contraseña se genera sola (ej. `k7Pm-4xQa-9tRw`).
+2. **Enviar por WhatsApp** o **Copiar datos**: enlace, usuario y contraseña.
+3. El dueño entra por `/dueno` con usuario y contraseña. Solo ve sus proyectos y solo cambia estados (con "Deshacer"). No puede cambiar precios, fotos, textos ni el plano, ni su contraseña.
+4. Si olvida sus datos: **Ver** muestra la contraseña actual. **Generar contraseña nueva** invalida la anterior y cierra su sesión. **Quitar acceso** lo saca de inmediato.
+5. Un mismo usuario puede tener varios proyectos ("Dar acceso a un usuario existente").
 
 ## Formulario "Publica tu proyecto"
 

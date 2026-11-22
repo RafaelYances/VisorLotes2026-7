@@ -1,6 +1,14 @@
 import { asset } from '../lib/data';
 import type { GalleryItem, Highlight, LotStatus, Project, ProjectCard } from '../types';
 
+export interface OwnerAccount {
+  id: string;
+  username: string;
+  name: string;
+  last_login: number | null;
+  since: number;
+}
+
 export interface Lead {
   id: string;
   ts: number;
@@ -94,11 +102,14 @@ export const adminApi = {
   deleteLead: (id: string) => call<{ ok: true }>('leads/delete', { id }),
   owners: (project: string) =>
     call<{
-      owners: { id: string; email: string; name: string; last_login: number | null; since: number }[];
-      invites: { id: string; created_at: number; expires_at: number }[];
+      owners: OwnerAccount[];
+      accounts: { id: string; username: string; name: string }[];
     }>(`owners?project=${encodeURIComponent(project)}`),
-  inviteOwner: (project: string) => call<{ ok: true; link: string; expires: number }>('owners/invite', { project }),
-  cancelInvite: (id: string) => call<{ ok: true }>('owners/cancel-invite', { id }),
+  createOwner: (project: string, username: string, name: string) =>
+    call<{ ok: true; id: string; username: string; password: string }>('owners/create', { project, username, name }),
+  revealOwner: (id: string) => call<{ ok: true; password: string }>('owners/reveal', { id }),
+  resetOwner: (id: string) => call<{ ok: true; password: string }>('owners/reset', { id }),
+  linkOwner: (id: string, project: string) => call<{ ok: true }>('owners/link', { id, project }),
   revokeOwner: (ownerId: string, project: string) => call<{ ok: true }>('owners/revoke', { ownerId, project }),
   projects: () => call<{ projects: AdminProjectCard[] }>('projects'),
   project: (slug: string) =>

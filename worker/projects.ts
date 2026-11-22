@@ -408,7 +408,9 @@ export async function projectsAdmin(env: Env, req: Request, path: string, ip: st
       db.prepare('DELETE FROM lot_overrides WHERE project = ?').bind(slug),
       db.prepare('DELETE FROM project_flags WHERE project = ?').bind(slug),
       db.prepare('DELETE FROM owner_projects WHERE project = ?').bind(slug),
-      db.prepare('DELETE FROM owner_invites WHERE project = ?').bind(slug),
+      // Dueños que se quedan sin proyectos: se elimina su cuenta
+      db.prepare('DELETE FROM owner_sessions WHERE owner_id NOT IN (SELECT owner_id FROM owner_projects)'),
+      db.prepare('DELETE FROM owner_accounts WHERE id NOT IN (SELECT owner_id FROM owner_projects)'),
     ];
     if (row?.source === 'panel') stmts.push(db.prepare('DELETE FROM projects WHERE slug = ?').bind(slug));
     else if (row)

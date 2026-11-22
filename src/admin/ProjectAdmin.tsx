@@ -853,6 +853,16 @@ export function NewProjectWizard({
 
 // ------------------------------------------------------------------ acceso del dueño
 
+const usernameFrom = (name: string) =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .slice(0, 40);
+
 function OwnerAccess({
   slug,
   projectName,
@@ -865,20 +875,36 @@ function OwnerAccess({
   notify: (ok: boolean, msg: string) => void;
 }) {
   const [data, setData] = useState<Awaited<ReturnType<typeof adminApi.owners>> | null>(null);
-  const [link, setLink] = useState<{ url: string; expires: number } | null>(null);
+  const [shown, setShown] = useState<Record<string, string>>({});
+  const [form, setForm] = useState(false);
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [userTouched, setUserTouched] = useState(false);
+  const [linkId, setLinkId] = useState('');
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState('');
 
   const load = useCallback(() => adminApi.owners(slug).then(setData).catch(onError), [slug, onError]);
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => {
+    if (!userTouched) setUsername(usernameFrom(name));
+  }, [name, userTouched]);
 
-  async function invite() {
+  const portal = `${window.location.origin}${import.meta.env.BASE_URL}dueno`;
+  const message = (u: string, pass: string) =>
+    `Hola, este es tu acceso para actualizar el estado de los lotes de ${projectName} en ${SITE.name}:\n\nEnlace: ${portal}\nUsuario: ${u}\nContraseña: ${pass}`;
+
+  async function create() {
     setBusy(true);
     try {
-      const r = await adminApi.inviteOwner(slug);
-      setLink({ url: r.link, expires: r.expires });
+      const r = await adminApi.createOwner(slug, username, name);
+      setShown((s) => ({ ...s, [r.id]: r.password }));
+      setForm(false);
+      setName('');
+      setUserTouched(false);
+      notify(true, 'Acceso creado');
       load();
     } catch (e) {
       onError(e);
@@ -887,9 +913,14 @@ function OwnerAccess({
     }
   }
 
-  const message = link
-    ? `Hola, este es tu acceso para actualizar el estado de los lotes de ${projectName} en ${SITE.name}. Ábrelo y crea tu cuenta (es de un solo uso y vence el ${new Date(link.expires).toLocaleDateString('es-CO')}):\n${link.url}`
-    : '';
+  async function copy(key: string, text: string) {
+    await navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(''), 1500);
+  }
+
+  const others = data?.accounts.filter((a) => !data.owners.some((o) => o.id === a.id)) ?? [];
+  const inputCls2 = 'focus:border-brand-500 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none';
 
   return (
     <div className="mt-6 space-y-3 rounded-2xl p-4 ring-1 ring-slate-200">
@@ -898,100 +929,189 @@ function OwnerAccess({
           <UserCog className="text-brand-600 size-4" /> Acceso del dueño del proyecto
         </h3>
         <p className="mt-1 text-xs text-slate-500">
-          El dueño entra por <b>/dueno</b> y <b>solo</b> puede cambiar el estado de los lotes (disponible, reservado, vendido). No puede
-          cambiar precios, fotos, textos ni el plano.
+          El dueño entra por <b>/dueno</b> con usuario y contraseña, y <b>solo</b> puede cambiar el estado de los lotes (disponible,
+          reservado, vendido).
         </p>
       </div>
 
-      {data?.owners.map((o) => (
-        <div key={o.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
-          <div className="min-w-0 flex-1 text-sm">
-            <div className="font-bold text-slate-900">{o.name || o.email}</div>
-            <div className="truncate text-xs text-slate-500">
-              {o.email} · {o.last_login ? `último ingreso ${new Date(o.last_login).toLocaleDateString('es-CO')}` : 'aún no ingresa'}
-            </div>
-          </div>
-          <button
-            onClick={async () => {
-              if (!confirm(`¿Quitar el acceso de ${o.email} a "${projectName}"? Dejará de poder cambiar estados de inmediato.`)) return;
-              try {
-                await adminApi.revokeOwner(o.id, slug);
-                notify(true, 'Acceso retirado');
-                load();
-              } catch (e) {
-                onError(e);
-              }
-            }}
-            className="h-9 shrink-0 rounded-lg px-3 text-xs font-bold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50"
-          >
-            Quitar acceso
-          </button>
-        </div>
-      ))}
-      {data && data.owners.length === 0 && <p className="text-xs text-slate-500">Ningún dueño tiene acceso todavía.</p>}
-
-      {data && data.invites.length > 0 && (
-        <div className="space-y-1">
-          {data.invites.map((i) => (
-            <div
-              key={i.id}
-              className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200"
-            >
-              <span>Invitación pendiente · vence el {new Date(i.expires_at).toLocaleDateString('es-CO')}</span>
+      {data?.owners.map((o) => {
+        const pass = shown[o.id];
+        return (
+          <div key={o.id} className="space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1 text-sm">
+                <div className="font-bold text-slate-900">{o.name}</div>
+                <div className="text-xs text-slate-500">
+                  {o.last_login
+                    ? `Último ingreso ${new Date(o.last_login).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}`
+                    : 'Aún no ha ingresado'}
+                </div>
+              </div>
               <button
                 onClick={async () => {
+                  if (!confirm(`¿Quitar el acceso de ${o.name} a "${projectName}"? Dejará de poder entrar de inmediato.`)) return;
                   try {
-                    await adminApi.cancelInvite(i.id);
-                    if (link) setLink(null);
+                    await adminApi.revokeOwner(o.id, slug);
+                    notify(true, 'Acceso retirado');
                     load();
                   } catch (e) {
                     onError(e);
                   }
                 }}
-                className="font-bold underline"
+                className="h-8 shrink-0 rounded-lg px-2.5 text-xs font-bold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50"
               >
-                Anular
+                Quitar acceso
               </button>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 rounded-lg bg-white p-2.5 text-sm ring-1 ring-slate-200">
+              <span className="text-xs font-semibold text-slate-500">Usuario</span>
+              <code className="font-mono font-bold text-slate-900 select-all">{o.username}</code>
+              <span className="text-xs font-semibold text-slate-500">Contraseña</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="font-mono font-bold text-slate-900 select-all">{pass ?? '••••-••••-••••'}</code>
+                {pass ? (
+                  <button
+                    onClick={() => setShown(({ [o.id]: _, ...rest }) => rest)}
+                    className="text-xs font-bold text-slate-500 hover:underline"
+                  >
+                    Ocultar
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const r = await adminApi.revealOwner(o.id);
+                        setShown((s) => ({ ...s, [o.id]: r.password }));
+                      } catch (e) {
+                        onError(e);
+                      }
+                    }}
+                    className="text-brand-700 text-xs font-bold hover:underline"
+                  >
+                    Ver
+                  </button>
+                )}
+              </div>
+            </div>
+            {pass && (
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(message(o.username, pass))}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="bg-brand-600 hover:bg-brand-700 inline-flex h-8 items-center rounded-lg px-3 text-xs font-bold text-white"
+                >
+                  Enviar por WhatsApp
+                </a>
+                <button
+                  onClick={() => copy(o.id, message(o.username, pass))}
+                  className="h-8 rounded-lg bg-white px-3 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+                >
+                  {copied === o.id ? 'Copiado ✔' : 'Copiar datos'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm(`¿Generar una contraseña nueva para ${o.name}? La actual dejará de funcionar y su sesión se cerrará.`))
+                      return;
+                    try {
+                      const r = await adminApi.resetOwner(o.id);
+                      setShown((s) => ({ ...s, [o.id]: r.password }));
+                      notify(true, 'Contraseña nueva generada');
+                    } catch (e) {
+                      onError(e);
+                    }
+                  }}
+                  className="h-8 rounded-lg bg-white px-3 text-xs font-bold text-amber-700 ring-1 ring-amber-200"
+                >
+                  Generar contraseña nueva
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {data && data.owners.length === 0 && !form && <p className="text-xs text-slate-500">Ningún dueño tiene acceso todavía.</p>}
 
-      {link ? (
-        <div className="bg-brand-50 ring-brand-200 space-y-2 rounded-xl p-3 ring-1">
-          <p className="text-brand-900 text-xs font-bold">
-            Enlace de invitación (de un solo uso, vence en 7 días). Cópialo ahora: por seguridad no se vuelve a mostrar.
-          </p>
-          <code className="block rounded-lg bg-white p-2 text-[11px] break-all text-slate-700 select-all">{link.url}</code>
-          <div className="flex flex-wrap gap-2">
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(message)}`}
-              target="_blank"
-              rel="noopener"
-              className="bg-brand-600 hover:bg-brand-700 inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-bold text-white"
-            >
-              Enviar por WhatsApp
-            </a>
+      {form ? (
+        <div className="bg-brand-50/60 ring-brand-100 space-y-2 rounded-xl p-3 ring-1">
+          <input
+            className={inputCls2}
+            value={name}
+            maxLength={80}
+            placeholder="Nombre del dueño (ej. María Gómez)"
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+          <input
+            className={inputCls2}
+            value={username}
+            maxLength={40}
+            placeholder="Usuario (ej. maria.gomez)"
+            autoCapitalize="none"
+            onChange={(e) => {
+              setUserTouched(true);
+              setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''));
+            }}
+          />
+          <p className="text-[11px] text-slate-500">La contraseña se genera automáticamente y podrás verla aquí cuando la necesites.</p>
+          <div className="flex gap-2">
             <button
-              onClick={async () => {
-                await navigator.clipboard.writeText(message);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              }}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+              disabled={busy || !name.trim() || username.length < 3}
+              onClick={create}
+              className="bg-brand-600 hover:bg-brand-700 inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold text-white disabled:opacity-50"
             >
-              {copied ? 'Copiado ✔' : 'Copiar mensaje'}
+              {busy && <Loader2 className="size-4 animate-spin" />} Crear acceso
+            </button>
+            <button
+              onClick={() => setForm(false)}
+              className="h-10 rounded-lg bg-white px-3 text-sm font-bold text-slate-600 ring-1 ring-slate-200"
+            >
+              Cancelar
             </button>
           </div>
         </div>
       ) : (
-        <button
-          disabled={busy}
-          onClick={invite}
-          className="inline-flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-slate-800 ring-1 ring-slate-200 hover:ring-slate-300 disabled:opacity-60"
-        >
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Crear enlace de invitación
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setForm(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-slate-800 ring-1 ring-slate-200 hover:ring-slate-300"
+          >
+            <Plus className="size-4" /> Crear acceso para el dueño
+          </button>
+          {others.length > 0 && (
+            <div className="flex items-center gap-2">
+              <select
+                value={linkId}
+                onChange={(e) => setLinkId(e.target.value)}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-2 text-sm"
+              >
+                <option value="">Dar acceso a un usuario existente…</option>
+                {others.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.username})
+                  </option>
+                ))}
+              </select>
+              {linkId && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await adminApi.linkOwner(linkId, slug);
+                      setLinkId('');
+                      notify(true, 'Acceso agregado');
+                      load();
+                    } catch (e) {
+                      onError(e);
+                    }
+                  }}
+                  className="bg-brand-600 h-10 rounded-xl px-3 text-sm font-bold text-white"
+                >
+                  Agregar
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
