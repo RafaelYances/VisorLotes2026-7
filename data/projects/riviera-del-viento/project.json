@@ -17,11 +17,58 @@
   },
   "currency": "COP",
   "highlights": [
-    { "icon": "waves", "title": "3 salidas al mar", "text": "La más cercana a solo 3 minutos caminando" },
-    { "icon": "road", "title": "Vía de acceso principal", "text": "Conexión directa y vía privada interna" },
-    { "icon": "layers", "title": "4 etapas", "text": "Lotes desde 300 m² con medidas reales" },
-    { "icon": "palmtree", "title": "Entorno natural", "text": "Ambiente campestre y brisa del Caribe" }
+    {
+      "icon": "waves",
+      "title": "3 salidas al mar",
+      "text": "La más cercana a solo 3 minutos caminando"
+    },
+    {
+      "icon": "road",
+      "title": "Vía de acceso principal",
+      "text": "Conexión directa y vía privada interna"
+    },
+    {
+      "icon": "layers",
+      "title": "4 etapas",
+      "text": "Lotes desde 300 m² con medidas reales"
+    },
+    {
+      "icon": "palmtree",
+      "title": "Entorno natural",
+      "text": "Ambiente campestre y brisa del Caribe"
+    }
   ],
-  "setbacks": { "front": 3, "back": 3, "side": 1.5 },
-  "cad": { "crs": "utm", "zone": 18, "hemisphere": "north" }
+  "setbacks": {
+    "front": 3,
+    "back": 3,
+    "side": 1.5
+  },
+  "cad": {
+    "crs": "utm",
+    "zone": 18,
+    "hemisphere": "north"
+  },
+  "gallery": [
+    {
+      "file": "05-sobrevuelo.mp4",
+      "caption": "Sobrevuelo del proyecto (imagen satelital © Esri)"
+    },
+    {
+      "file": "01-vista-aerea.jpg",
+      "caption": "Vista aérea del loteo con disponibilidad (imagen satelital © Esri)",
+      "cover": true
+    },
+    {
+      "file": "02-desde-el-mar.jpg",
+      "caption": "El proyecto visto desde el mar, con sus 3 salidas a la playa (© Esri)"
+    },
+    {
+      "file": "03-etapas.jpg",
+      "caption": "Etapas 1 a 4 y vía privada interna (© Esri)"
+    },
+    {
+      "file": "04-entorno.jpg",
+      "caption": "Entorno: San Bernardo del Viento y la costa Caribe (© Esri)"
+    }
+  ]
 }

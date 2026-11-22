@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import DxfParser from 'dxf-parser';
 import proj4 from 'proj4';
 import ExcelJS from 'exceljs';
+import { buildGallery } from './gallery.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'data', 'projects');
@@ -452,7 +453,9 @@ async function buildProject(slug) {
     location.lat = round((bounds[1] + bounds[3]) / 2, 6);
   }
 
-  const { cad, ...publicMeta } = meta;
+  const gallery = await buildGallery({ slug, dir, meta, publicDir: path.join(ROOT, 'public') });
+
+  const { cad, gallery: _galleryConfig, ...publicMeta } = meta;
   const detail = {
     slug,
     ...publicMeta,
@@ -466,6 +469,7 @@ async function buildProject(slug) {
     greens: greens.map((r) => r.map(toLL)),
     labels: labels.filter((l) => l.kind !== 'note' && l.kind !== 'beach'),
     pois,
+    gallery: gallery.items,
   };
   const card = {
     slug,
@@ -477,6 +481,11 @@ async function buildProject(slug) {
     stats,
     preview,
     bounds,
+    cover: gallery.cover,
+    media: {
+      photos: gallery.items.filter((i) => i.type === 'image').length,
+      videos: gallery.items.filter((i) => i.type === 'video').length,
+    },
   };
   return { detail, card };
 }
@@ -490,7 +499,7 @@ for (const slug of slugs) {
   fs.writeFileSync(path.join(OUT, 'projects', `${slug}.json`), JSON.stringify(detail));
   cards.push(card);
   console.log(
-    `✔ ${slug}: ${detail.stats.total} lotes, ${detail.manzanas.length} manzanas, ${detail.labels.length} rótulos, ${detail.pois.length} POIs`,
+    `✔ ${slug}: ${detail.stats.total} lotes, ${detail.manzanas.length} manzanas, ${detail.labels.length} rótulos, ${detail.pois.length} POIs, ${detail.gallery.length} en galería`,
   );
 }
 const order = { 'en-venta': 0, proximamente: 1, vendido: 2 };

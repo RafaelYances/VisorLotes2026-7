@@ -9,3 +9,4 @@ public/data
 *.dwl2
 *.tsbuildinfo
 .wrangler
+public/media

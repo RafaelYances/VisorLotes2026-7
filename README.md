@@ -70,6 +70,24 @@ El navegador **ya no lee el DXF**: el script lo convierte una sola vez en JSON (
 
 > `mirador-troncal` se armó con el archivo `VISOR.dxf` que había en el repositorio. Su nombre y textos son de ejemplo: cámbialos en su `project.json` o borra la carpeta.
 
+## Galería de fotos y videos
+
+1. Copia las fotos (`.jpg`, `.png`, `.webp`) y videos (`.mp4`, `.webm`) en `data/projects/<slug>/galeria/`.
+2. El orden es alfabético; usa prefijos `01-`, `02-`… El texto que se muestra sale del nombre del archivo (`03-vista-al-mar.jpg` → "Vista al mar").
+3. (Opcional) En `project.json` puedes fijar orden, textos y portada:
+   ```json
+   "gallery": [
+     { "file": "05-sobrevuelo.mp4", "caption": "Sobrevuelo del proyecto" },
+     { "file": "01-vista-aerea.jpg", "caption": "Vista aérea", "cover": true }
+   ]
+   ```
+   La portada (`"cover": true`, o la primera foto) se usa en la tarjeta del inicio.
+4. Un video puede tener portada propia: `recorrido.mp4` + `recorrido.poster.jpg`.
+5. `npm run data` (o `npm run dev`).
+
+Las fotos se optimizan solas al compilar (WebP de 1920 px + miniatura de 640 px + vista previa borrosa), así que puedes subirlas grandes.
+**Videos:** máximo **25 MB** por archivo (límite de Cloudflare; si lo supera se omite y se avisa en la compilación). Recomendado: menos de 15 MB, 720p o 1080p, 15–30 segundos, sin audio. Para comprimir uno con [HandBrake](https://handbrake.fr) usa el preset *Web → Social 25 MB 30 Seconds 1080p* o *Fast 720p30*.
+
 ## Formulario "Publica tu proyecto"
 
 Sin backend: por defecto abre WhatsApp con los datos ya escritos. Si prefieres recibirlos por correo/hoja de cálculo, crea un formulario en [Formspree](https://formspree.io) o [Web3Forms](https://web3forms.com) y pon su URL en un archivo `.env`:

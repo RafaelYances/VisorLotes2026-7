@@ -1,4 +1,4 @@
-import { ArrowUpRight, MapPin, Ruler } from 'lucide-react';
+import { ArrowUpRight, Camera, MapPin, Play, Ruler } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { PROJECT_STATUS } from '../config';
@@ -23,10 +23,46 @@ export function ProjectCard({ project, index }: { project: Card; index: number }
       <div className="from-brand-950 via-brand-900 to-brand-700 relative aspect-[16/10] overflow-hidden bg-gradient-to-br">
         <div className="absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.35)_1px,transparent_1px)] [background-size:18px_18px] opacity-30" />
         <div className="bg-brand-400/30 absolute -top-16 -right-16 size-56 rounded-full blur-3xl transition-transform duration-700 group-hover:scale-125" />
-        <LotsPreview
-          preview={project.preview}
-          className="absolute inset-0 h-full w-full p-6 transition-transform duration-700 ease-out group-hover:scale-[1.06] group-hover:-rotate-1"
-        />
+        {project.cover && (
+          <>
+            <img src={project.cover.blur} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover blur-lg" />
+            <img
+              src={asset(project.cover.thumb)}
+              alt={`Vista de ${project.name}`}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.06]"
+            />
+            <div className="from-brand-950/80 via-brand-950/10 absolute inset-0 bg-gradient-to-t to-transparent" />
+          </>
+        )}
+        {/* Con foto: el plano aparece al pasar el mouse. Sin foto: el plano es la portada. */}
+        <div
+          className={
+            project.cover
+              ? 'bg-brand-950/75 absolute inset-0 opacity-0 backdrop-blur-sm transition-opacity duration-500 group-hover:opacity-100'
+              : 'absolute inset-0'
+          }
+        >
+          <LotsPreview
+            preview={project.preview}
+            className="absolute inset-0 h-full w-full p-6 transition-transform duration-700 ease-out group-hover:scale-[1.06] group-hover:-rotate-1"
+          />
+        </div>
+        {project.media.photos + project.media.videos > 0 && (
+          <span className="absolute right-4 bottom-4 inline-flex items-center gap-2 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+            {project.media.photos > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Camera className="size-3.5" /> {project.media.photos}
+              </span>
+            )}
+            {project.media.videos > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Play className="size-3 fill-current" /> {project.media.videos}
+              </span>
+            )}
+          </span>
+        )}
         {project.logo && (
           <img src={asset(project.logo)} alt="" className="absolute bottom-4 left-4 h-11 w-auto drop-shadow-lg" loading="lazy" />
         )}

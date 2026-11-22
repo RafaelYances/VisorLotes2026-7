@@ -51,6 +51,20 @@ export interface Highlight {
   text: string;
 }
 
+export interface GalleryItem {
+  type: 'image' | 'video';
+  src: string;
+  /** miniatura (fotos, o portada del video si existe) */
+  thumb?: string;
+  poster?: string;
+  w?: number;
+  h?: number;
+  /** vista previa borrosa (data URI) */
+  blur?: string;
+  caption: string;
+  sizeMB?: number;
+}
+
 export interface ProjectCard {
   slug: string;
   name: string;
@@ -61,6 +75,8 @@ export interface ProjectCard {
   stats: ProjectStats;
   bounds: [number, number, number, number];
   preview: { w: number; h: number; lots: { d: string; s: LotStatus }[] };
+  cover: { src: string; thumb: string; blur: string } | null;
+  media: { photos: number; videos: number };
 }
 
 export interface Project {
@@ -84,4 +100,5 @@ export interface Project {
   greens: LngLat[][];
   labels: { text: string; lng: number; lat: number; angle: number; kind: string; size: number }[];
   pois: { type: string; name: string; lng: number; lat: number; minutes: number | null }[];
+  gallery: GalleryItem[];
 }

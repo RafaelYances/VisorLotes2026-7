@@ -33,5 +33,12 @@
     "crs": "utm",
     "zone": 18,
     "hemisphere": "north"
-  }
+  },
+  "gallery": [
+    {
+      "file": "01-vista-aerea.jpg",
+      "caption": "Vista aérea de ejemplo (imagen satelital © Esri)",
+      "cover": true
+    }
+  ]
 }

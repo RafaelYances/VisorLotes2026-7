@@ -1,4 +1,6 @@
-import { Heart, MapPin, Waves } from 'lucide-react';
+import { Heart, Images, MapPin, Waves } from 'lucide-react';
+import { useState } from 'react';
+import { GalleryMosaic, Lightbox } from '../components/Gallery';
 import { motion } from 'motion/react';
 import { HighlightIcon, StatusDot, WhatsAppIcon } from '../components/ui';
 import { STATUS } from '../config';
@@ -16,6 +18,8 @@ interface Props {
 
 export function ProjectOverview({ project, visible, favorites, onSelect, onPoi }: Props) {
   const s = project.stats;
+  const [shown, setShown] = useState<number | null>(null);
+  const gallery = project.gallery ?? [];
   const byMz = new Map<string, Lot[]>();
   for (const l of project.lots) byMz.set(l.manzana, [...(byMz.get(l.manzana) ?? []), l]);
   const favLots = project.lots.filter((l) => favorites.includes(l.id));
@@ -43,6 +47,22 @@ export function ProjectOverview({ project, visible, favorites, onSelect, onPoi }
         </div>
 
         <div className="space-y-6 p-5">
+          {/* Galería */}
+          {gallery.length > 0 && (
+            <section>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                  <Images className="size-3.5" /> Galería
+                </h3>
+                <button onClick={() => setShown(0)} className="text-brand-700 text-xs font-semibold hover:underline">
+                  Ver todo ({gallery.length})
+                </button>
+              </div>
+              <GalleryMosaic items={gallery} onOpen={setShown} />
+              <Lightbox items={gallery} index={shown} onClose={() => setShown(null)} onIndex={setShown} />
+            </section>
+          )}
+
           {/* Disponibilidad */}
           <section className="flex items-center gap-5">
             <Donut stats={s} />
