@@ -79,3 +79,26 @@ Cómo subirlo: **Crear → Reel**, elegir el video, poner la portada `portada-vi
 ## Respuesta rápida cuando alguien comente "info" o "precio"
 
 > ¡Hola! 👋 Gracias por escribir. Te envío por interno un ejemplo en vivo. El primer proyecto lo montamos gratis para que lo pruebes sin compromiso.
+
+---
+
+# Semana 2 — Reel "Un solo enlace"
+
+Archivos: `Lotes-del-Caribe-video-2.mp4` y su portada `portada-video-2.jpg`.
+
+> ¿Respondiendo todo el día "¿ese lote todavía está?", "¿cuánto mide?", "¿me mandas el plano?"? 😩
+>
+> Mándales **un solo enlace** 🔗 y que lo vean todo:
+> 🛰️ El proyecto desde el satélite, con playas, vías y sitios cercanos
+> 🟢 Cuáles lotes siguen disponibles
+> 📐 Medidas reales de cada lote
+> 🏡 Qué casa les cabe
+>
+> Y cuando te escriben, ya llegan con el lote escogido ✅
+>
+> ¿Vendes lotes en la Costa? **Pruébalo GRATIS** con tu proyecto.
+> WhatsApp 👉 311 400 7716
+>
+> #LotesDelCaribe #Lotes #VentaDeLotes #FincaRaíz #Urbanización #CostaCaribe #Córdoba #Sucre #Bolívar
+
+Sugerencia: publícalo el lunes o martes por la noche, y a mitad de semana vuelve a compartirlo en tu historia con la frase "¿Te pasa esto? 😅".
