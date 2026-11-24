@@ -242,6 +242,12 @@ export default {
       url.port = '';
       return Response.redirect(url.toString(), 301);
     }
+    // Quien escriba "dueño" (con ñ) o en mayúsculas llega igual al portal del dueño
+    const low = decodeURIComponent(url.pathname).toLowerCase();
+    if (low !== url.pathname && /^\/(dueño|dueno|admin)(\/|$)/.test(low)) {
+      url.pathname = low.replace(/^\/dueño/, '/dueno');
+      return Response.redirect(url.toString(), 301);
+    }
     if (url.pathname.startsWith('/api/')) {
       try {
         return await api(req, env, url.pathname);
