@@ -1,7 +1,8 @@
 /**
  * Servidor (Cloudflare Worker) del visor.
- * - Los archivos del sitio (HTML, JS, datos, fotos) los sirve Cloudflare directamente.
- * - Este Worker atiende solo /api/*: datos en vivo de los lotes y el panel de administración.
+ * - Redirige www.lotescaribe.cc y la dirección de workers.dev al dominio principal.
+ * - Atiende /api/* (datos en vivo de los lotes y el panel de administración), /files/* y /data/projects*.
+ * - Lo demás lo entrega a los archivos estáticos (JS, CSS e imágenes se sirven sin pasar por aquí).
  */
 import { clearCookie, clientIp, createSession, destroyAllSessions, destroySession, hasSession, isThrottled, recordAttempt } from './auth';
 import { hashPassword, newTotpSecret, safeEqual, verifyPassword, verifyTotp } from './crypto';
@@ -228,9 +229,19 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   return fail(404, 'No encontrado');
 }
 
+// Dominio principal: www y la dirección de workers.dev redirigen aquí
+const MAIN_HOST = 'lotescaribe.cc';
+const redirectHost = (h: string) => h === 'www.' + MAIN_HOST || (h.startsWith('visorlotes2026-7.') && h.endsWith('.workers.dev'));
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
+    if (redirectHost(url.hostname) && (req.method === 'GET' || req.method === 'HEAD')) {
+      url.protocol = 'https:';
+      url.hostname = MAIN_HOST;
+      url.port = '';
+      return Response.redirect(url.toString(), 301);
+    }
     if (url.pathname.startsWith('/api/')) {
       try {
         return await api(req, env, url.pathname);

@@ -8,8 +8,9 @@
     "binding": "ASSETS",
     // Rutas como /proyecto/... se resuelven en la app
     "not_found_handling": "single-page-application",
-    // Solo /api/* pasa por el Worker; el resto lo sirve Cloudflare directamente
-    "run_worker_first": ["/api/*", "/files/*", "/data/projects.json", "/data/projects/*"]
+    // Las páginas pasan por el Worker (para redirigir www y workers.dev a lotescaribe.cc);
+    // los archivos estáticos pesados los sirve Cloudflare directamente, sin gastar invocaciones.
+    "run_worker_first": ["/*", "!/assets/*", "!/img/*", "!/favicon*", "!/apple-touch-icon.png", "!/robots.txt"]
   },
   "d1_databases": [
     {
