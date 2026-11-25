@@ -280,6 +280,14 @@ function Viewer({ project }: { project: Project }) {
         onBearing={setBearing}
       />
 
+      {project.preview && (
+        <div className="pointer-events-none absolute inset-x-0 top-[72px] z-30 flex justify-center px-3 md:top-[84px] md:right-[460px]">
+          <div className="shadow-soft rounded-full bg-amber-400 px-4 py-1.5 text-center text-xs font-bold text-amber-950 ring-1 ring-amber-500">
+            Vista previa · Este proyecto está oculto: solo tú lo ves
+          </div>
+        </div>
+      )}
+
       {/* Barra superior */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start gap-2 p-3 md:right-[460px] md:p-4">
         <Link

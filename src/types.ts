@@ -83,6 +83,8 @@ export interface ProjectCard {
 }
 
 export interface Project {
+  /** Solo en vista previa del administrador: el proyecto está oculto al público. */
+  preview?: boolean;
   slug: string;
   name: string;
   tagline: string;

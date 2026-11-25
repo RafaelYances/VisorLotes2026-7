@@ -43,17 +43,22 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
     for (const r of results) (out[r.project] ??= {})[r.lot] = [r.status, r.price];
     const gallery = await gallerySummary(db);
     // No exponer datos de proyectos ocultos o eliminados
-    const { results: hidden } = await db.prepare('SELECT slug FROM projects WHERE visible = 0 OR deleted = 1').all<{ slug: string }>();
+    const admin = await hasSession(db, req);
+    const { results: hidden } = await db
+      .prepare(admin ? 'SELECT slug FROM projects WHERE deleted = 1' : 'SELECT slug FROM projects WHERE visible = 0 OR deleted = 1')
+      .all<{ slug: string }>();
     for (const h of hidden) {
       delete out[h.slug];
       delete gallery[h.slug];
     }
-    return json({ overrides: out, gallery }, 200, { 'Cache-Control': 'public, max-age=5' });
+    return json({ overrides: out, gallery }, 200, { 'Cache-Control': admin ? 'private, no-store' : 'public, max-age=5' });
   }
 
   const gm = path.match(/^\/api\/public\/gallery\/([a-z0-9-]{1,60})$/);
   if (gm && method === 'GET') {
-    if (!(await loadDetail(env, req, gm[1]))) return fail(404, 'No encontrado'); // oculto o inexistente
+    const okPublic = !!(await loadDetail(env, req, gm[1]));
+    // oculto o inexistente (el administrador sí ve la galería de un proyecto oculto)
+    if (!okPublic && !((await hasSession(db, req)) && (await loadDetail(env, req, gm[1], true)))) return fail(404, 'No encontrado');
     return galleryPublic(env, gm[1]);
   }
 

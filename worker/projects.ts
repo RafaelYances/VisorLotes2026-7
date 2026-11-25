@@ -5,7 +5,7 @@
  * - Proyectos "panel": creados desde el panel (datos en D1, plano procesado en R2).
  * Ocultar/mostrar y eliminar exigen reautenticación (contraseña + código TOTP).
  */
-import { isThrottled, recordAttempt } from './auth';
+import { isThrottled, recordAttempt, hasSession } from './auth';
 import { verifyPassword, verifyTotp } from './crypto';
 import { audit } from './db';
 import { fail, json, originOk } from './http';
@@ -238,7 +238,13 @@ export async function projectsPublic(env: Env, req: Request, path: string) {
   const m = path.match(/^\/api\/public\/project\/([a-z0-9-]{1,60})$/);
   if (m) {
     const d = await loadDetail(env, req, m[1]);
-    return d ? json(d, 200, { 'Cache-Control': 'public, max-age=5' }) : fail(404, 'Proyecto no encontrado');
+    if (d) return json(d, 200, { 'Cache-Control': 'public, max-age=5' });
+    // Vista previa: el administrador con sesión puede ver un proyecto oculto (nunca uno eliminado)
+    if (await hasSession(env.DB, req)) {
+      const h = await loadDetail(env, req, m[1], true);
+      if (h) return json({ ...h, preview: true }, 200, { 'Cache-Control': 'private, no-store' });
+    }
+    return fail(404, 'Proyecto no encontrado');
   }
   return null;
 }

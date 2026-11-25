@@ -588,6 +588,14 @@ export function ProjectEditor({
             {visible ? 'Aparece en el inicio y su enlace funciona.' : 'Solo tú lo ves en el panel.'}
           </div>
         </div>
+        <a
+          href={`${import.meta.env.BASE_URL}proyecto/${slug}`}
+          target="_blank"
+          rel="noopener"
+          className="grid h-9 shrink-0 place-items-center rounded-xl bg-white px-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300"
+        >
+          {visible ? 'Ver' : 'Vista previa'}
+        </a>
         <button
           onClick={() =>
             setStepUp({
