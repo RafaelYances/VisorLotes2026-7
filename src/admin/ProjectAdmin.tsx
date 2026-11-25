@@ -60,6 +60,7 @@ export function emptyMeta(): ProjectMeta {
     currency: 'COP',
     highlights: [],
     setbacks: { front: 3, back: 3, side: 1.5 },
+    rounding: 'exact',
     logo: null,
   };
 }
@@ -81,6 +82,7 @@ export function metaFromProject(p: Project): ProjectMeta {
     currency: p.currency ?? 'COP',
     highlights: p.highlights ?? [],
     setbacks: p.setbacks ?? { front: 3, back: 3, side: 1.5 },
+    rounding: p.rounding === 'plano' ? 'plano' : 'exact',
     logo: p.logo ?? null,
   };
 }
@@ -372,6 +374,35 @@ export function ProjectForm({
               ))}
             </div>
             <p className="text-[11px] text-slate-500">Verifica la norma urbanística del municipio.</p>
+          </Section>
+
+          <Section title="Medidas de los lotes">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(
+                [
+                  ['exact', 'Exactas del plano', 'Ej: 7,26 m y 152,61 m²'],
+                  ['plano', 'Redondeadas (como el topógrafo)', 'Ej: 7,3 m y 153 m²'],
+                ] as const
+              ).map(([v, t, ex]) => (
+                <label
+                  key={v}
+                  className={cx(
+                    'flex cursor-pointer items-start gap-2.5 rounded-xl p-3 ring-1 transition',
+                    meta.rounding === v ? 'bg-brand-50 ring-brand-500' : 'bg-white ring-slate-200 hover:ring-slate-300',
+                  )}
+                >
+                  <input type="radio" name="rounding" className="accent-brand-600 mt-0.5" checked={meta.rounding === v} onChange={() => set({ rounding: v })} />
+                  <span className="text-sm">
+                    <b className="block text-slate-900">{t}</b>
+                    <span className="text-xs text-slate-500">{ex}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Redondeadas: longitudes a 1 decimal (7,25 → 7,3 y 7,24 → 7,2) y áreas en m² enteros. Solo cambia lo que se muestra; el dibujo sobre el
+              mapa sigue siendo el exacto.
+            </p>
           </Section>
         </>
       )}

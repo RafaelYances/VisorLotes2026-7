@@ -96,6 +96,7 @@ export interface Project {
   currency: string;
   highlights: Highlight[];
   setbacks: { front: number; back: number; side: number };
+  rounding?: 'exact' | 'plano';
   bounds: [number, number, number, number];
   stats: ProjectStats;
   affine: { e0: number; n0: number; lng0: number; lat0: number; a: number; b: number; c: number; d: number };

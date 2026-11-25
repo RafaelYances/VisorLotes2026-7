@@ -89,6 +89,24 @@ async function listCards(env: Env, req: Request, includeHidden: boolean) {
   return out;
 }
 
+/**
+ * Medidas "como el topógrafo": longitudes a 1 decimal (7,25 → 7,3; 7,24 → 7,2) y áreas en m² enteros.
+ * Solo cambia lo que se muestra; la geometría (coords, local) sigue siendo la exacta.
+ */
+const r1 = (x: unknown) => (typeof x === 'number' ? Math.round(x * 10 + 1e-6) / 10 : x);
+const r0 = (x: unknown) => (typeof x === 'number' ? Math.round(x + 1e-6) : x);
+function roundLikePlan(d: Record<string, unknown>) {
+  const lots = ((d.lots as Record<string, unknown>[]) ?? []).map((l) => ({
+    ...l,
+    area: r0(l.area),
+    perimeter: r1(l.perimeter),
+    frente: r1(l.frente),
+    fondo: r1(l.fondo),
+    sides: ((l.sides as Record<string, unknown>[]) ?? []).map((s) => ({ ...s, length: r1(s.length) })),
+  }));
+  return { ...d, lots };
+}
+
 /** Ficha completa de un proyecto (plano + datos), o null. */
 export async function loadDetail(env: Env, req: Request, slug: string, includeHidden = false) {
   if (!SLUG.test(slug) || slug.length > 60) return null;
@@ -102,7 +120,8 @@ export async function loadDetail(env: Env, req: Request, slug: string, includeHi
   }
   if (!base && (!row || row.source === 'static')) base = await staticDetail(env, req, slug);
   if (!base) return null;
-  const detail = row ? applyMeta(base, JSON.parse(row.meta || '{}')) : base;
+  let detail = row ? applyMeta(base, JSON.parse(row.meta || '{}')) : base;
+  if (detail.rounding === 'plano') detail = roundLikePlan(detail);
   return { ...detail, slug, gallery: (detail.gallery as unknown[]) ?? [] } as Record<string, unknown> & {
     slug: string;
     gallery: unknown[];
@@ -177,6 +196,7 @@ function cleanMeta(input: Record<string, unknown>, slug: string): Meta | string 
     currency: input.currency === 'USD' ? 'USD' : 'COP',
     highlights,
     setbacks: { front: num(sb.front, 0, 30) ?? 3, back: num(sb.back, 0, 30) ?? 3, side: num(sb.side, 0, 30) ?? 1.5 },
+    rounding: input.rounding === 'plano' ? 'plano' : 'exact',
     logo,
   };
 }

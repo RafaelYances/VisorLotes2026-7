@@ -36,6 +36,8 @@ export interface ProjectMeta {
   currency: string;
   highlights: Highlight[];
   setbacks: { front: number; back: number; side: number };
+  /** 'plano': medidas a 1 decimal y áreas en m² enteros, como las rotula el topógrafo */
+  rounding: 'exact' | 'plano';
   logo: string | null;
 }
 
